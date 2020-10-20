@@ -1,6 +1,6 @@
 from sympy import (meijerg, I, S, integrate, Integral, oo, gamma, cosh, sinc,
                    hyperexpand, exp, simplify, sqrt, pi, erf, erfc, sin, cos,
-                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise)
+                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise, sympify, Abs)
 from sympy.integrals.meijerint import (_rewrite_single, _rewrite1,
         meijerint_indefinite, _inflate_g, _create_lookup_table,
         meijerint_definite, meijerint_inversion)
@@ -738,9 +738,11 @@ def test_issue_6462():
 
 def test_special_cases():
 
-    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
-    assert integrate((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+    assert meijerint_indefinite(x**y, x) == Piecewise((Integral(1/x, x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
 
+    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+    assert str(integrate(sin(x**(n*k + 1)), x, meijerg=True)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
 
 
 from sympy.integrals.rationaltools import ratint

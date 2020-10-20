@@ -1611,8 +1611,8 @@ def _rewrite1(f, x, recursive=True, find_special=False):
     Return None on failure.
     """
     print("_rewrite1 f", f)
-    fac, po, g = _split_mul(f, x)
-    g = _rewrite_single(g, x, recursive, find_special)
+    fac, po, gm = _split_mul(f, x)
+    g = _rewrite_single(gm, x, recursive, find_special)
     if g:
         special = []
         print("po", po)
@@ -1634,16 +1634,35 @@ def _rewrite1(f, x, recursive=True, find_special=False):
 
             # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
             # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
+
+            print("simple spec po", (fac*spec_po*gm, spec_po_cond))
+
+            # special.append((fac*spec_po*gm, spec_po_cond))
+
+
         if g[2] is not None:
             print("g[2]", g[2])
             spec_f, spec_cond = g[2]
-            spec_f = spec_f*fac*spec_po
-            special.append((spec_f, And(spec_cond, spec_po_cond)))
-        elif spec_po is not po:
-            if False:
-                spec_f = fac*spec_po*g
-                special.append((spec_f, spec_po_cond))
+            # special.append((spec_f, spec_cond))
+
+            if spec_po is not None:
+                spec_f_spec_po = spec_f*fac*spec_po
+                special.append((spec_f_spec_po, And(spec_cond, spec_po_cond)))
+                print("da g", g)
+                special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
+
+        else:
+            special.append((fac*spec_po*gm, spec_po_cond))
+
+
+        if False and spec_po is not po:
+            # if False:
             print("i has problem")
+            spec_spec = fac*spec_po*gm
+            print("spec spec", spec_spec)
+            # print("spec f", spec_f)
+            # s_fac, s_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
+            # special.append((spec_f, spec_po_cond))
             # assert False
 
             # special.append(g[2]*po)
@@ -1721,9 +1740,10 @@ def meijerint_indefinite(f, x):
             continue
         res = res.subs(x, x - a)
         if spec:
-            spec = spec[0].subs(x, x - a), spec[1]
+            # spec = spec[0].subs(x, x - a), spec[1]
+            spec = [(i.subs(x, x - a), c) for i, c in spec]
         if spec:
-            conditional_results.append(spec)
+            conditional_results.extend(spec)
         res_cond = S.true
         if splitting_points_used:
             if not a.is_Number:
@@ -1802,7 +1822,7 @@ def meijerint_indefinite(f, x):
             # results.extend(rv)
     print("conditional_results", conditional_results)
     if conditional_results:
-        res = Piecewise(*conditional_results)
+        res = piecewise_fold(Piecewise(*conditional_results))
         print("final meij res", res)
         return res
 
@@ -1866,9 +1886,12 @@ def _meijerint_indefinite_1(f, x):
     if special:
         print("ultimately found special", special, f, x)
         print("special", special)
-        assert len(special) == 1
-        special = special[0]
-        special = Integral(special[0], x), special[1]
+        # assert len(special) == 1
+
+        special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
+
+        # special = special[0]
+        # special = Integral(special[0], x), special[1]
         # assert 0
         # special_res = S(0)
         # for spec in special:
