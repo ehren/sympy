@@ -1683,7 +1683,7 @@ def _rewrite1(f, x, recursive=True, find_special=False):
             # special.append((spec_fac, spec_po, spec_g, And(spec_cond, spec_spec_cond)))
             # special.append(g[2])
 
-        return fac, po, g[0], g[1], special
+        return fac, po, g_integrand, g_cond, special
 
 
 def _rewrite2(f, x):
