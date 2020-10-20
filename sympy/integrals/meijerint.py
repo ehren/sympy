@@ -1712,6 +1712,7 @@ def meijerint_indefinite(f, x):
     splitting_points_used = []
     conditional_results = []
     found_closed_form = False
+    has_closed_form = Dummy("has_closed_form")
 
     for a in all_splitting_points:
         print("splitting point a", a)
@@ -1731,31 +1732,64 @@ def meijerint_indefinite(f, x):
                 print("res cond", res_cond)
         splitting_points_used.append(a)
         print("my spec", spec)
-        if not conditional_results or res_cond is not S.true:
 
-            conditional_results.insert(0, (res, res_cond))
-            if not _has(res, hyper, meijerg):
-                found_closed_form = True
-                break
+        if not _has(res, hyper, meijerg):
+            found_closed_form = True
+            res_cond = And(has_closed_form, res_cond)
+
+        conditional_results.append((res, res_cond))
+
+        if found_closed_form:
+            break
+
+    def compare(item):
+        r, c = item
+
+        if c is has_closed_form:
+            return 0
+        elif c is S.true:
+            return 1
         else:
-            if _has(res, hyper, meijerg):
-                # will be removed if any preceding results have corresponding condition S.true (relies on short circuit evaluation of Piecewise)
-                conditional_results.append((res, res_cond))
-            else:
-                # will be kept
-                to_insert = 0
-                for i, (c, r) in enumerate(conditional_results):
-                    if c != S.true:
-                        to_insert = i# + 1
-                        break
-                conditional_results.insert(to_insert, (res, res_cond))
-                found_closed_form = True
-                break
+            return -1
+
+    print("presorted", conditional_results)
+    conditional_results = sorted(conditional_results, key=compare)
+    print("sorted", conditional_results)
+
+    conditional_results = [(r, c.subs(has_closed_form, S.true)) for r, c in conditional_results]
+
+
+        #
+        # if not conditional_results or res_cond is not S.true:
+        #
+        #     if not _has(res, hyper, meijerg):
+        #         found_closed_form = True
+        #         res_cond = And(has_closed_form, res_cond)
+        #
+        #     conditional_results.insert(0, (res, res_cond))
+        # else:
+        #     if _has(res, hyper, meijerg):
+        #         # will be removed if any preceding results have corresponding condition S.true (relies on short circuit evaluation of Piecewise)
+        #         conditional_results.append((res, res_cond))
+        #     else:
+        #         found_closed_form = True
+        #         res_cond = And(has_closed_form, res_cond)
+        #         # will be kept
+        #         to_insert = 0
+        #         for i, (c, r) in enumerate(conditional_results):
+        #             if c != S.true:
+        #                 to_insert = i + 1
+        #                 break
+        #         conditional_results.insert(to_insert, (res, res_cond))
+        # if found_closed_form:
+        #     break
 
         # if _has(res, hyper, meijerg):
         #     results.append(res)
         # else:
         #     return res
+
+
     if not found_closed_form and f.has(HyperbolicFunction):
         _debug('Try rewriting hyperbolics in terms of exp.')
         print("i needz fixing")

@@ -1,6 +1,6 @@
 from sympy import (meijerg, I, S, integrate, Integral, oo, gamma, cosh, sinc,
                    hyperexpand, exp, simplify, sqrt, pi, erf, erfc, sin, cos,
-                   exp_polar, polygamma, hyper, log, expand_func, Rational)
+                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise)
 from sympy.integrals.meijerint import (_rewrite_single, _rewrite1,
         meijerint_indefinite, _inflate_g, _create_lookup_table,
         meijerint_definite, meijerint_inversion)
@@ -667,6 +667,10 @@ def test_issue_6252():
     assert anti == sympify("Piecewise((2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (Integral(1/(a**(1/3)*x), x), Eq(b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
     bnz = symbols("bnz", zero=False)
     assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
+    # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
+    assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
+
+    print(anti.subs({b : 0, a: 0}))#.doit() == zoo*log(x)
 
 
 def test_issue_6348():
@@ -732,6 +736,13 @@ def test_issue_6462():
             integrate(cos(x**2)/x**2, x, meijerg=True))
 
 
+def test_special_cases():
+
+    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+    assert integrate((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+
+
 from sympy.integrals.rationaltools import ratint
 from sympy.integrals.manualintegrate import manualintegrate
 from sympy import symbols, Eq
@@ -759,8 +770,11 @@ y = symbols("y")
 
 # print(simplify(Eq(n - 1, -1)))
 
+# from sympy import zoo
+# (zoo*a).is_zero
 
-
-test_issue_6252()
+test_special_cases()
+# test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
+# test_special_cases()
