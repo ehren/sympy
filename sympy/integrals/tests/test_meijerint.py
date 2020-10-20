@@ -1,6 +1,6 @@
 from sympy import (meijerg, I, S, integrate, Integral, oo, gamma, cosh, sinc,
                    hyperexpand, exp, simplify, sqrt, pi, erf, erfc, sin, cos,
-                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise, sympify, Abs, Eq, Ne)
+                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise, sympify, Abs, Eq, Ne, zoo)
 from sympy.integrals.meijerint import (_rewrite_single, _rewrite1,
         meijerint_indefinite, _inflate_g, _create_lookup_table,
         meijerint_definite, meijerint_inversion)
@@ -664,13 +664,18 @@ def test_issue_6252():
     # putting in numerical values seems to work at least for the Ne(a/b, 0)
     # case and the specific values tested below.
     # TODO Ne(a/b, 0) case could use atan
-    assert anti == sympify("Piecewise((2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (Integral(1/(a**(1/3)*x), x), Eq(b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+
+
+
+    assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+    # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
+    # assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
+    # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
+    assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
     bnz = symbols("bnz", zero=False)
     assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
-    # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
-    assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
 
-    print(anti.subs({b : 0, a: 0}))#.doit() == zoo*log(x)
+    assert anti.subs({b : 0, a: 0}) == zoo*log(x)
 
 
 def test_issue_6348():
@@ -737,16 +742,15 @@ def test_issue_6462():
 
 
 def test_special_cases():
-    # print(meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x))
-    # return
 
-    assert meijerint_indefinite(x**y, x) == Piecewise((Integral(1/x, x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
+    assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
+    assert meijerint_indefinite(x**y, x, _eval_special_case=False) == Piecewise((Integral(1/x, x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
 
-    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
 
-    assert str(integrate(sin(x**(n*k + 1)), x, meijerg=True)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
+    assert str(meijerint_indefinite(sin(x**(n*k + 1)), x, _eval_special_case=False)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
 
-    assert meijerint_indefinite(x**y*sin(x**n), x) == \
+    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=False) == \
            Piecewise((Integral(sin(1)/x, x), Eq(n, 0) & Eq(y, -1)), (Integral(sin(x**n)/x, x), Eq(y, -1) & Ne(n, 0)), (Integral(x**y*sin(1), x), Eq(n, 0) & Ne(y, -1)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
 
 
@@ -781,7 +785,7 @@ y = symbols("y")
 # (zoo*a).is_zero
 
 test_special_cases()
-# test_issue_6252()
+test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
 # test_special_cases()

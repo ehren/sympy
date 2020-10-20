@@ -1716,7 +1716,7 @@ def _rewrite2(f, x):
                     return fac, po, g1[0], g2[0], cond
 
 
-def meijerint_indefinite(f, x):
+def meijerint_indefinite(f, x, _eval_special_case=True):
     """
     Compute an indefinite integral of ``f`` by rewriting it as a G function.
 
@@ -1744,7 +1744,7 @@ def meijerint_indefinite(f, x):
 
     for a in all_splitting_points:
         print("splitting point a", a)
-        res, spec = _meijerint_indefinite_1(f.subs(x, x + a), x)
+        res, spec = _meijerint_indefinite_1(f.subs(x, x + a), x, eval_special_case=_eval_special_case)
         if not res:
             continue
         res = res.subs(x, x - a)
@@ -1851,7 +1851,7 @@ def meijerint_indefinite(f, x):
     #     return next(ordered(results))
 
 
-def _meijerint_indefinite_1(f, x):
+def _meijerint_indefinite_1(f, x, eval_special_case=True):
     """ Helper that does not attempt any substitution. """
     from sympy import Integral, piecewise_fold, nan, zoo
     _debug('Trying to compute the indefinite integral of', f, 'wrt', x)
@@ -1908,8 +1908,15 @@ def _meijerint_indefinite_1(f, x):
         print("ultimately found special", special, f, x)
         print("special", special)
         # assert len(special) == 1
+        from sympy import integrate
 
-        special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
+        if eval_special_case:
+            ifunc = integrate
+        else:
+            ifunc = Integral
+
+        # special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
+        special = [ (ifunc(integrand, x), cond) for integrand, cond in special ]
 
         # special = special[0]
         # special = Integral(special[0], x), special[1]
