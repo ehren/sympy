@@ -1614,6 +1614,10 @@ def _rewrite1(f, x, recursive=True, find_special=False):
     fac, po, gm = _split_mul(f, x)
     g = _rewrite_single(gm, x, recursive, find_special)
     if g:
+        g_integrand, g_cond, g_special = g
+
+
+
         special = []
         print("po", po)
         spec_po = po
@@ -1639,17 +1643,18 @@ def _rewrite1(f, x, recursive=True, find_special=False):
 
             # special.append((fac*spec_po*gm, spec_po_cond))
 
-
-        if g[2] is not None:
+        if g_special is not None:
             print("g[2]", g[2])
-            spec_f, spec_cond = g[2]
+            spec_f, spec_cond = g_special
             # special.append((spec_f, spec_cond))
 
             if spec_po is not None:
                 spec_f_spec_po = spec_f*fac*spec_po
                 special.append((spec_f_spec_po, And(spec_cond, spec_po_cond)))
                 print("da g", g)
-                special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
+                # special.append((fac*spec_po*gm, Or(And(~spec_cond, spec_po_cond), ~S(g[1]))))
+                # special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
+                special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
 
         else:
             special.append((fac*spec_po*gm, spec_po_cond))
@@ -1777,7 +1782,19 @@ def meijerint_indefinite(f, x):
     print("sorted", conditional_results)
 
     conditional_results = [(r, c.subs(has_closed_form, S.true)) for r, c in conditional_results]
+    from sympy import Implies
 
+    new_conditional_results = conditional_results
+    for i, (r, c) in enumerate(conditional_results):
+        # for o, (r_other, c_other) in enumerate(conditional_results[:i]):
+        for r_other, c_other in conditional_results[i:]:
+            if c_other is S.true:
+                continue
+            if Implies(~c, c_other) is S.true:
+            # if And(c_other, c) is S.false:
+                new_conditional_results.remove((r_other, c_other))
+
+    conditional_results = new_conditional_results
 
         #
         # if not conditional_results or res_cond is not S.true:
