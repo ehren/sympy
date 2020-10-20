@@ -49,9 +49,14 @@ from sympy.functions.special.hyper import meijerg
 from sympy.utilities.iterables import multiset_partitions, ordered
 from sympy.utilities.misc import debug as _debug
 from sympy.utilities import default_sort_key
+from sympy.core.relational import Eq, Ne
+
+from sympy import Pow
 
 # keep this at top for easy reference
 z = Dummy('z')
+
+# _debug = print
 
 
 def _has(res, *f):
@@ -70,19 +75,31 @@ def _create_lookup_table(table):
     p, q, a, b, c = list(map(wild, 'pqabc'))
     n = Wild('n', properties=[lambda x: x.is_Integer and x > 0])
     t = p*z**q
+    from sympy import Eq
+    trivial_case = Eq(p, 0) | Eq(q, 0)
 
-    def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True):
+    def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=None):
+        special = trivial_case
+
+        if special_case is not None:
+            special |= trivial_case
+
         table.setdefault(_mytype(formula, z), []).append((formula,
-                                     [(fac, meijerg(an, ap, bm, bq, arg))], cond, hint))
+                                     [(fac, meijerg(an, ap, bm, bq, arg))], cond, hint, special))
 
-    def addi(formula, inst, cond, hint=True):
+    def addi(formula, inst, cond, hint=True, special_case=None):
+        special = trivial_case
+
+        if special_case is not None:
+            special |= trivial_case
+
         table.setdefault(
-            _mytype(formula, z), []).append((formula, inst, cond, hint))
+            _mytype(formula, z), []).append((formula, inst, cond, hint, special_case))
 
     def constant(a):
         return [(a, meijerg([1], [], [], [0], z)),
                 (a, meijerg([], [1], [0], [], z))]
-    table[()] = [(a, constant(a), True, True)]
+    table[()] = [(a, constant(a), True, True, None)]
 
     # [P], Section 8.
 
@@ -98,7 +115,7 @@ def _create_lookup_table(table):
 
     # Section 8.4.2
     from sympy import (gamma, pi, cos, exp, re, sin, sinc, sqrt, sinh, cosh,
-                       factorial, log, erf, erfc, erfi, polar_lift)
+                       factorial, log, erf, erfc, erfi, polar_lift, Eq)
     # TODO this needs more polar_lift (c/f entry for exp)
     add(Heaviside(t - b)*(t - b)**(a - 1), [a], [], [], [0], t/b,
         gamma(a)*b**(a - 1), And(b > 0))
@@ -109,7 +126,7 @@ def _create_lookup_table(table):
     add(Heaviside((b/p)**(1/q) - z)*(b - t)**(a - 1), [], [a], [0], [], t/b,
         gamma(a)*b**(a - 1), And(b > 0))
     add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-        hint=Not(IsNonPositiveInteger(a)))
+        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
         2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1)
     add((t**a - b**a)/(t - b), [0, a], [], [0, a], [], t/b,
@@ -151,6 +168,7 @@ def _create_lookup_table(table):
 
     # Section 8.4.5
     # TODO can do t + a. but can also do by expansion... (XXX not really)
+    # add(sin(t), [], [], [S.Half], [0], t**2/4, sqrt(pi), special_case=Eq(q, 0) | Eq(p, 0))
     add(sin(t), [], [], [S.Half], [0], t**2/4, sqrt(pi))
     add(cos(t), [], [], [0], [S.Half], t**2/4, sqrt(pi))
 
@@ -1415,7 +1433,7 @@ _lookup_table = None
 
 @cacheit
 @timeit
-def _rewrite_single(f, x, recursive=True):
+def _rewrite_single(f, x, recursive=True, find_special=False):
     """
     Try to rewrite f as a sum of single G functions of the form
     C*x**s*G(a*x**b), where b is a rational number and C is independent of x.
@@ -1430,6 +1448,8 @@ def _rewrite_single(f, x, recursive=True):
         _lookup_table = {}
         _create_lookup_table(_lookup_table)
 
+    special_case = None
+
     if isinstance(f, meijerg):
         from sympy import factor
         coeff, m = factor(f.argument, x).as_coeff_mul(x)
@@ -1441,14 +1461,14 @@ def _rewrite_single(f, x, recursive=True):
                 return None
         elif m != x:
             return None
-        return [(1, 0, meijerg(f.an, f.aother, f.bm, f.bother, coeff*m))], True
+        return [(1, 0, meijerg(f.an, f.aother, f.bm, f.bother, coeff*m))], True, special_case
 
     f_ = f
     f = f.subs(x, z)
     t = _mytype(f, z)
     if t in _lookup_table:
         l = _lookup_table[t]
-        for formula, terms, cond, hint in l:
+        for formula, terms, cond, hint, special in l:
             subs = f.match(formula, old=True)
             if subs:
                 subs_ = {}
@@ -1464,6 +1484,31 @@ def _rewrite_single(f, x, recursive=True):
                     cond = unpolarify(cond.subs(subs))
                 if _eval_cond(cond) == False:
                     continue
+                if find_special and special is not None:
+                    print("found special_case", special)
+                    print("special_case subs", special.subs(subs))
+                    print("special_case subs unpolarified", unpolarify(special.subs(subs)))
+                    special_case_subs = unpolarify(special.subs(subs))
+                    if isinstance(special_case_subs, Eq):
+                        special_f = f.subs(*special_case_subs.args)
+                    # else:
+                    #     special_f = f
+                        special_f = special_f.subs(z, x)
+                        print("special_f", special_f)
+                        print("special_case_subs", special_case_subs)
+                        # special_case = Piecewise((Integral(special_f, x), special_case_subs))
+                        # special_case = special_f, special_case_subs
+                        # special_case = (special_f, special_case_subs)
+                        rewrite_special = _rewrite_single(special_f, x, find_special=False)
+                        if False and rewrite_special:
+                            print("rewrite_special", rewrite_special)
+                            res_special, cond_special, _ = rewrite_special
+                            special_case = res_special, And(cond_special, special_case_subs)
+                            print("da special", special_case)
+                        else:
+                            special_case = special_f, special_case_subs
+
+
                 if not isinstance(terms, list):
                     terms = terms(subs)
                 res = []
@@ -1483,7 +1528,7 @@ def _rewrite_single(f, x, recursive=True):
                                 unpolarify(g.argument, exponents_only=True))
                     res.append(r1 + (g,))
                 if res:
-                    return res, cond
+                    return res, cond, special_case
 
     # try recursive mellin transform
     if not recursive:
@@ -1554,10 +1599,10 @@ def _rewrite_single(f, x, recursive=True):
                                    a, lift=True), exponents_only=True)
                                *x**b))]
     _debug('Recursive Mellin transform worked:', g)
-    return res, True
+    return res, True, special_case
 
 
-def _rewrite1(f, x, recursive=True):
+def _rewrite1(f, x, recursive=True, find_special=False):
     """
     Try to rewrite f using a (sum of) single G functions with argument a*x**b.
     Return fac, po, g such that f = fac*po*g, fac is independent of x
@@ -1565,10 +1610,52 @@ def _rewrite1(f, x, recursive=True):
     Here g is a result from _rewrite_single.
     Return None on failure.
     """
+    print("_rewrite1 f", f)
     fac, po, g = _split_mul(f, x)
-    g = _rewrite_single(g, x, recursive)
+    g = _rewrite_single(g, x, recursive, find_special)
     if g:
-        return fac, po, g[0], g[1]
+        special = []
+        print("po", po)
+        spec_po = po
+        spec_po_cond = True
+        if find_special and isinstance(po, Pow) and po.exp.is_zero is None:
+            print("fac, po, g", fac, po.base**-1, g)
+            print("f", f)
+            # print("po replace", f.subs(po.exp, -1))
+            # simped = Eq(po.exp, -1).simplify()
+            # f_subs = f.subs(po.exp, -1).subs(*simped.args)
+            # print("po replace", f_subs)
+            # special.append((f_subs, simped))
+            spec_po = po.base**-1
+            spec_po_cond = Eq(po.exp, -1)
+
+            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+
+            # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
+            # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
+        if g[2] is not None:
+            print("g[2]", g[2])
+            spec_f, spec_cond = g[2]
+            spec_f = spec_f*fac*spec_po
+            special.append((spec_f, And(spec_cond, spec_po_cond)))
+        elif spec_po is not po:
+            if False:
+                spec_f = fac*spec_po*g
+                special.append((spec_f, spec_po_cond))
+            print("i has problem")
+            # assert False
+
+            # special.append(g[2]*po)
+
+            # special.append((spec_f, spec_cond))
+
+            # spec_fac, spec_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
+
+            # special.append((spec_fac, spec_po, spec_g, And(spec_cond, spec_spec_cond)))
+            # special.append(g[2])
+
+        return fac, po, g[0], g[1], special
 
 
 def _rewrite2(f, x):
@@ -1617,25 +1704,76 @@ def meijerint_indefinite(f, x):
     from sympy import hyper, meijerg
 
     results = []
-    for a in sorted(_find_splitting_points(f, x) | {S.Zero}, key=default_sort_key):
-        res = _meijerint_indefinite_1(f.subs(x, x + a), x)
+
+    all_splitting_points = sorted(_find_splitting_points(f, x) | {S.Zero}, key=default_sort_key)
+    print("all split", all_splitting_points)
+    print("len split", len(all_splitting_points))
+
+    splitting_points_used = []
+    conditional_results = []
+    found_closed_form = False
+
+    for a in all_splitting_points:
+        print("splitting point a", a)
+        res, spec = _meijerint_indefinite_1(f.subs(x, x + a), x)
         if not res:
             continue
         res = res.subs(x, x - a)
-        if _has(res, hyper, meijerg):
-            results.append(res)
+        if spec:
+            spec = spec[0].subs(x, x - a), spec[1]
+        if spec:
+            conditional_results.append(spec)
+        res_cond = S.true
+        if splitting_points_used:
+            if not a.is_Number:
+                for s in splitting_points_used:
+                    res_cond &= Ne(a, s)
+                print("res cond", res_cond)
+        splitting_points_used.append(a)
+        print("my spec", spec)
+        if not conditional_results or res_cond is not S.true:
+
+            conditional_results.insert(0, (res, res_cond))
+            if not _has(res, hyper, meijerg):
+                found_closed_form = True
+                break
         else:
-            return res
-    if f.has(HyperbolicFunction):
+            if _has(res, hyper, meijerg):
+                # will be removed if any preceding results have corresponding condition S.true (relies on short circuit evaluation of Piecewise)
+                conditional_results.append((res, res_cond))
+            else:
+                # will be kept
+                to_insert = 0
+                for i, (c, r) in enumerate(conditional_results):
+                    if c != S.true:
+                        to_insert = i# + 1
+                        break
+                conditional_results.insert(to_insert, (res, res_cond))
+                found_closed_form = True
+                break
+
+        # if _has(res, hyper, meijerg):
+        #     results.append(res)
+        # else:
+        #     return res
+    if not found_closed_form and f.has(HyperbolicFunction):
         _debug('Try rewriting hyperbolics in terms of exp.')
+        print("i needz fixing")
+        # assert 0
         rv = meijerint_indefinite(
             _rewrite_hyperbolics_as_exp(f), x)
         if rv:
-            if not type(rv) is list:
-                return collect(factor_terms(rv), rv.atoms(exp))
-            results.extend(rv)
-    if results:
-        return next(ordered(results))
+            # if not type(rv) is list:
+            return collect(factor_terms(rv), rv.atoms(exp))
+            # results.extend(rv)
+    print("conditional_results", conditional_results)
+    if conditional_results:
+        res = Piecewise(*conditional_results)
+        print("final meij res", res)
+        return res
+
+    # if results:
+    #     return next(ordered(results))
 
 
 def _meijerint_indefinite_1(f, x):
@@ -1643,14 +1781,15 @@ def _meijerint_indefinite_1(f, x):
     from sympy import Integral, piecewise_fold, nan, zoo
     _debug('Trying to compute the indefinite integral of', f, 'wrt', x)
 
-    gs = _rewrite1(f, x)
+    gs = _rewrite1(f, x, find_special=True)
     if gs is None:
         # Note: the code that calls us will do expand() and try again
-        return None
+        return None, None
 
-    fac, po, gl, cond = gs
+    fac, po, gl, cond, special = gs
     _debug(' could rewrite:', gs)
     res = S.Zero
+
     for C, s, g in gl:
         a, b = _get_coeff_exp(g.argument, x)
         _, c = _get_coeff_exp(po, x)
@@ -1690,6 +1829,19 @@ def _meijerint_indefinite_1(f, x):
         # Note: we really do want the powers of x to combine.
         res += powdenest(fac_*r, polar=True)
 
+    if special:
+        print("ultimately found special", special, f, x)
+        print("special", special)
+        assert len(special) == 1
+        special = special[0]
+        special = Integral(special[0], x), special[1]
+        # assert 0
+        # special_res = S(0)
+        # for spec in special:
+        #     fac_spec, po_spec, gl_spec, cond_spec = spec
+        #     a_special_res = process(fac_spec, po_spec, gl_spec, cond_spec)
+        #     print("i is done special", a_special_res)
+
     def _clean(res):
         """This multiplies out superfluous powers of x we created, and chops off
         constants:
@@ -1724,7 +1876,12 @@ def _meijerint_indefinite_1(f, x):
         res = Piecewise(*newargs)
     else:
         res = _my_unpolarify(_clean(res))
-    return Piecewise((res, _my_unpolarify(cond)), (Integral(f, x), True))
+    if special is not None:
+        pass
+
+    res = Piecewise((res, _my_unpolarify(cond)), (Integral(f, x), True))
+    print("final res", res)
+    return res, special
 
 
 @timeit
@@ -1975,7 +2132,7 @@ def _meijerint_definite_4(f, x, only_double=False):
     if not only_double:
         gs = _rewrite1(f, x, recursive=False)
         if gs is not None:
-            fac, po, g, cond = gs
+            fac, po, g, cond, special = gs
             _debug('Could rewrite as single G function:', fac, po, g)
             res = S.Zero
             for C, s, f in g:
@@ -2115,7 +2272,7 @@ def meijerint_inversion(f, x, t):
 
     gs = _rewrite1(f, x)
     if gs is not None:
-        fac, po, g, cond = gs
+        fac, po, g, cond, special = gs
         _debug('Could rewrite as single G function:', fac, po, g)
         res = S.Zero
         for C, s, f in g:

@@ -49,12 +49,12 @@ def test_rewrite_single():
     assert _rewrite_single(exp(x)*sin(x), x) == \
         ([(-sqrt(2)/(2*sqrt(pi)), 0,
            meijerg(((Rational(-1, 2), 0, Rational(1, 4), S.Half, Rational(3, 4)), (1,)),
-                   ((), (Rational(-1, 2), 0)), 64*exp_polar(-4*I*pi)/x**4))], True)
+                   ((), (Rational(-1, 2), 0)), 64*exp_polar(-4*I*pi)/x**4))], True, None)
 
 
 def test_rewrite1():
     assert _rewrite1(x**3*meijerg([a], [b], [c], [d], x**2 + y*x**2)*5, x) == \
-        (5, x**3, [(1, 0, meijerg([a], [b], [c], [d], x**2*(y + 1)))], True)
+        (5, x**3, [(1, 0, meijerg([a], [b], [c], [d], x**2*(y + 1)))], True, [])
 
 
 def test_meijerint_indefinite_numerically():
@@ -657,11 +657,16 @@ def test_issue_6122():
 
 
 def test_issue_6252():
+    from sympy import sympify, gammasimp, hyperexpand
     expr = 1/x/(a + b*x)**Rational(1, 3)
     anti = integrate(expr, x, meijerg=True)
-    assert not anti.has(hyper)
     # XXX the expression is a mess, but actually upon differentiation and
-    # putting in numerical values seems to work...
+    # putting in numerical values seems to work at least for the Ne(a/b, 0)
+    # case and the specific values tested below.
+    # TODO Ne(a/b, 0) case could use atan
+    assert anti == sympify("Piecewise((2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (Integral(1/(a**(1/3)*x), x), Eq(b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+    bnz = symbols("bnz", zero=False)
+    assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
 
 
 def test_issue_6348():
@@ -725,3 +730,37 @@ def test_issue_6462():
     # exception
     assert integrate(cos(x**n)/x**n, x, meijerg=True).subs(n, 2).equals(
             integrate(cos(x**2)/x**2, x, meijerg=True))
+
+
+from sympy.integrals.rationaltools import ratint
+from sympy.integrals.manualintegrate import manualintegrate
+from sympy import symbols, Eq
+x=symbols("x")
+# print(integrate(1/(a + x**2), x))
+# print(ratint(1/(a + x**2), x))
+# print(meijerint_indefinite(1/(a + x**2), x))
+# print(meijerint_indefinite(1/(a + x**2 + 1), x))
+# print(manualintegrate(1/(-1 + x**2), x).subs(a, -1))
+# print(manualintegrate(1/(a + x**2), x).subs(a, -1))
+
+n=symbols("n")
+k=symbols("k")
+y = symbols("y")
+# print(meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x))
+# print(meijerint_indefinite((x**(-1))*sqrt(2), x))
+# print(manualintegrate((x**(n-1))*sqrt(1+x**n), x))
+# print(meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x))
+# print(meijerint_indefinite((x**(n-2))*sqrt(1+x**n), x))
+# print(integrate((x**(n-2))*sqrt(1+x**n), x, heurisch=True))
+# print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
+# print(integrate(sin(x**(n*k + 1)), x, meijerg=True))
+# print(integrate(sin(x**(n*k + 1)), x))
+# print(meijerint_indefinite(x**y, x))
+
+# print(simplify(Eq(n - 1, -1)))
+
+
+
+test_issue_6252()
+# test_issue_8368()
+# test_issue_10211()
