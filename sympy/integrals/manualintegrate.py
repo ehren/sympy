@@ -760,7 +760,11 @@ def quadratic_denom_rule(integral):
                                 (ArctanhRule(a, b, c, integrand, symbol), sympy.And(sympy.Lt(symbol ** 2, -c / b), sympy.Lt(c / b, 0))),
             ], integrand, symbol)
         else:
-            return ArctanRule(a, b, c, integrand, symbol)
+            power = PowerRule(symbol, -2, integrand, symbol)
+            if b != 1:
+                power = ConstantTimesRule(1 / b, symbol ** -2, power, integrand, symbol)
+            return PiecewiseRule([(ArctanRule(a, b, c, integrand, symbol), sympy.Ne(c, 0)),
+                                  (power, True)], integrand, symbol)
 
     d = sympy.Wild('d', exclude=[symbol])
     match2 = integrand.match(a / (b * symbol ** 2 + c * symbol + d))

@@ -124,7 +124,9 @@ def test_manualintegrate_inversetrig():
                   (-atanh(2*x/sqrt(-ra))/(2*sqrt(-ra)), And(ra/4 < 0, x**2 < -ra/4)))
     assert manualintegrate(1/(4 + 4*x**2), x) == atan(x) / 4
 
-    assert manualintegrate(1/(a + b*x**2), x) == atan(x/sqrt(a/b))/(b*sqrt(a/b))
+    assert manualintegrate(1/(a + b*x**2), x) == Piecewise((atan(x/sqrt(a/b))/(b*sqrt(a/b)),
+                                                            Ne(a, 0)),
+                                                           (-1/(b*x), True))
 
     # asin
     assert manualintegrate(1/sqrt(1-x**2), x) == asin(x)
@@ -419,7 +421,8 @@ def test_issue_10847_slow():
 
 def test_issue_10847():
 
-    assert manualintegrate(x**2 / (x**2 - c), x) == c*atan(x/sqrt(-c))/sqrt(-c) + x
+    assert manualintegrate(x**2 / (x**2 - c), x) == \
+        c*Piecewise((atan(x/sqrt(-c))/sqrt(-c), Ne(c, 0)), (-1/x, True)) + x
 
     rc = Symbol('c', real=True)
     assert manualintegrate(x**2 / (x**2 - rc), x) == \
@@ -428,7 +431,8 @@ def test_issue_10847():
                      (-atanh(x/sqrt(rc))/sqrt(rc), And(-rc < 0, x**2 < rc))) + x
 
     assert manualintegrate(sqrt(x - y) * log(z / x), x) == \
-        4*y**Rational(3, 2)*atan(sqrt(x - y)/sqrt(y))/3 - 4*y*sqrt(x - y)/3 +\
+        4*y**2*Piecewise((atan(sqrt(x - y)/sqrt(y))/sqrt(y), Ne(y, 0)),
+                         (-1/sqrt(x - y), True))/3 - 4*y*sqrt(x - y)/3 + \
         2*(x - y)**Rational(3, 2)*log(z/x)/3 + 4*(x - y)**Rational(3, 2)/9
     ry = Symbol('y', real=True)
     rz = Symbol('z', real=True)
@@ -441,7 +445,8 @@ def test_issue_10847():
 
     assert manualintegrate(sqrt(x) * log(x), x) == 2*x**Rational(3, 2)*log(x)/3 - 4*x**Rational(3, 2)/9
     assert manualintegrate(sqrt(a*x + b) / x, x) == \
-        2*b*atan(sqrt(a*x + b)/sqrt(-b))/sqrt(-b) + 2*sqrt(a*x + b)
+        -2*b*Piecewise((-atan(sqrt(a*x + b)/sqrt(-b))/sqrt(-b), Ne(b, 0)),
+                       (1/sqrt(a*x + b), True)) + 2*sqrt(a*x + b)
     ra = Symbol('a', real=True)
     rb = Symbol('b', real=True)
     assert manualintegrate(sqrt(ra*x + rb) / x, x) == \
@@ -535,3 +540,8 @@ def test_quadratic_denom():
     assert manualintegrate(f, x) == 5*log(3*x**2 - 2*x + 8)/6 + 11*sqrt(23)*atan(3*sqrt(23)*(x - Rational(1, 3))/23)/69
     g = 3/(2*x**2 + 3*x + 1)
     assert manualintegrate(g, x) == 3*log(4*x + 2) - 3*log(4*x + 4)
+
+
+# import pytest
+# pytest.main([__file__])
+print(integrate(1/(a**5 - a + 1 +x**2), x, manual=True))
