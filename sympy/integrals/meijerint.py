@@ -1620,8 +1620,8 @@ def _rewrite1(f, x, recursive=True, find_special=False):
 
         special = []
         print("po", po)
-        spec_po = po
-        spec_po_cond = True
+        spec_po = None
+        spec_po_cond = S.false
         if find_special and isinstance(po, Pow) and po.exp.is_zero is None:
             print("fac, po, g", fac, po.base**-1, g)
             print("f", f)
@@ -1656,7 +1656,11 @@ def _rewrite1(f, x, recursive=True, find_special=False):
                 # special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
                 special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
 
-        else:
+            special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
+
+
+
+        elif spec_po is not None:
             special.append((fac*spec_po*gm, spec_po_cond))
 
 
