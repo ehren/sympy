@@ -1624,7 +1624,10 @@ def test_issue_13112():
 
 def test_issue_14709b():
     h = Symbol('h', positive=True)
+    # indef = integrate(x*acos(1 - 2*x/h), x)
+    # print("indef", indef)
     i = integrate(x*acos(1 - 2*x/h), (x, 0, h))
+    print(i)
     assert i == 5*h**2*pi/16
 
 
@@ -1661,9 +1664,10 @@ def test_issue_17473():
     x = Symbol('x')
     n = Symbol('n')
     assert integrate(sin(x**n), x) == \
-        x*x**n*gamma(S(1)/2 + 1/(2*n))*hyper((S(1)/2 + 1/(2*n),),
-                     (S(3)/2, S(3)/2 + 1/(2*n)),
-                     -x**(2*n)/4)/(2*n*gamma(S(3)/2 + 1/(2*n)))
+        Piecewise((Integral(sin(1), x), Eq(n, 0)),
+                  (x*x**n*gamma(S(1)/2 + 1/(2*n))*hyper((S(1)/2 + 1/(2*n),),
+                   (S(3)/2, S(3)/2 + 1/(2*n)),
+                   -x**(2*n)/4)/(2*n*gamma(S(3)/2 + 1/(2*n))), True))
 
 
 def test_issue_17671():
@@ -1704,3 +1708,7 @@ def test_issue_4231():
 def test_issue_17841():
     f = diff(1/(x**2+x+I), x)
     assert integrate(f, x) == 1/(x**2 + x + I)
+
+# test_issue_14241()
+# test_issue_14709b()
+test_issue_2975()
