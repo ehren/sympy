@@ -1709,6 +1709,8 @@ def test_issue_17841():
     f = diff(1/(x**2+x+I), x)
     assert integrate(f, x) == 1/(x**2 + x + I)
 
-test_issue_14241()
+# test_issue_14241()
 # test_issue_14709b()
 # test_issue_2975()
+# test_issue_4487()
+test_issue_15124()

@@ -1487,14 +1487,16 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                 if find_special and special is not None:
                     print("found special_case", special)
                     print("special_case subs", special.subs(subs))
+                    w = Wild("w", exclude=[z])
                     print("special_case subs unpolarified", unpolarify(special.subs(subs)))
                     special_case_subs = unpolarify(special.subs(subs))
                     if isinstance(special_case_subs, Eq):
-                        special_f = f.subs(*special_case_subs.args)
+                        # special_f = f.subs(*special_case_subs.args)
+                        special_f = f.replace(w*special_case_subs.args[0], special_case_subs.args[1])
                     # else:
                     #     special_f = f
                         special_f = special_f.subs(z, x)
-                        print("special_f", special_f)
+                        print("special_f", special_f, f_)
                         print("special_case_subs", special_case_subs)
                         # special_case = Piecewise((Integral(special_f, x), special_case_subs))
                         # special_case = special_f, special_case_subs
@@ -1916,7 +1918,7 @@ def _meijerint_indefinite_1(f, x, eval_special_case=True):
             ifunc = Integral
 
         # special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
-        special = [ (ifunc(integrand, x), cond) for integrand, cond in special ]
+        special = [ (ifunc(integrand, x), cond) if integrand != f else (Integral(f, x), cond) for integrand, cond in special]
 
         # special = special[0]
         # special = Integral(special[0], x), special[1]
