@@ -742,8 +742,8 @@ def test_issue_6462():
 
 
 def test_special_cases():
-    print( meijerint_indefinite(1/(a + x**(2*n)), x))
-    return
+    # print( meijerint_indefinite(1/(a + x**(2*n)), x))
+    # return
 
 
 

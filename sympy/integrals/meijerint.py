@@ -77,7 +77,10 @@ def _create_lookup_table(table):
     n = Wild('n', properties=[lambda x: x.is_Integer and x > 0])
     t = p*z**q
     from sympy import Eq
-    trivial_case = Eq(p, 0) | Eq(q, 0)
+    # trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
+    trivial_case = S.false #Eq(p, 0) | Eq(q, 0)
+    # trivial_case = Eq(q, 0)
+    # trivial_case = Eq(q, -1)
 
     def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=None):
         special = trivial_case
@@ -127,7 +130,7 @@ def _create_lookup_table(table):
     add(Heaviside((b/p)**(1/q) - z)*(b - t)**(a - 1), [], [a], [0], [], t/b,
         gamma(a)*b**(a - 1), And(b > 0))
     add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
+        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(q, 0) | Eq(b, 0))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
         2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1)
     add((t**a - b**a)/(t - b), [0, a], [], [0, a], [], t/b,
@@ -160,7 +163,7 @@ def _create_lookup_table(table):
     # (those after look obscure)
 
     # Section 8.4.3
-    add(exp(polar_lift(-1)*t), [], [], [0], [])
+    add(exp(polar_lift(-1)*t), [], [], [0], [], special_case=Eq(p, 0))
 
     # TODO can do sin^n, sinh^n by expansion ... where?
     # 8.4.4 (hyperbolic functions)
@@ -170,7 +173,7 @@ def _create_lookup_table(table):
     # Section 8.4.5
     # TODO can do t + a. but can also do by expansion... (XXX not really)
     # add(sin(t), [], [], [S.Half], [0], t**2/4, sqrt(pi), special_case=Eq(q, 0) | Eq(p, 0))
-    add(sin(t), [], [], [S.Half], [0], t**2/4, sqrt(pi))
+    add(sin(t), [], [], [S.Half], [0], t**2/4, sqrt(pi), special_case=Eq(q, 0))
     add(cos(t), [], [], [0], [S.Half], t**2/4, sqrt(pi))
 
     # Section 8.4.6 (sinc function)
@@ -1432,6 +1435,75 @@ def _int_inversion(g, x, t):
 _lookup_table = None
 
 
+def process_special_case_eq(f, x, special_case_subs):
+    w = Wild("w", exclude = [0, z] + list(f.find(Function)))
+    # w2 = Wild("w", exclude = [z] + list(f.find(Function)))
+    w2 = Wild("w2")
+    w3 = Wild("w", exclude = [z] + list(f.find(Function)))
+    ww = Wild("ww", exclude=[0])
+    special_f = f
+    if isinstance(special_case_subs, Eq):
+        special_f = f.subs(*special_case_subs.args)
+        # special_f = f
+
+        if 0 and isinstance(f, Function):
+            # special_f = f.replace() f.func(*new_args)
+            new_args = []
+            for arg in f.args:
+                new_args.append(arg.replace(w*(special_case_subs.args[0]), w*special_case_subs.args[1]))
+            special_f = f.func(*new_args)
+
+        # special_f = special_f.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False)
+        for func in f.find(Function):
+            # special_f = f.replace() f.func(*new_args)
+            new_args = []
+            for arg in func.args:
+                new_args.append(arg.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False))
+            special_f = special_f.replace(func, func.func(*new_args))
+
+
+        # special_f = special_f.replace(ww*special_case_subs.args[0] + w2, ww*special_case_subs.args[1] + w2).replace(*special_case_subs.args)
+
+        def replacer(rv):
+            if isinstance(rv, Function):
+                new_args = []
+                for arg in f.args:
+                    new_args.append(arg.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False))
+                return rv.func(*new_args)
+            return rv
+
+        from sympy import bottom_up
+
+        # special_f = bottom_up(special_f, replacer)
+
+
+        w1 = Wild("w1", exclude = [z] + list(f.find(Function)))
+        w2 = Wild("w2", exclude = [z] + list(f.find(Function)))
+        w3 = Wild("w3", exclude = [z] + list(f.find(Function)))
+        # for func in special_f.find(Function):
+        # w = Wild("w", exclude=[z, func])
+        # special_f = special_f.replace(w1*func.func(w2*special_case_subs.args[0] + w3), func.func(w2*special_case_subs.args[1] + w3), exact=False)
+        # special_f = special_f.replace(func.func(w2*special_case_subs.args[0] + w3), func.func(w2*special_case_subs.args[1] + w3), exact=False)
+
+        # special_f = f.replace(w*special_case_subs.args[0], special_case_subs.args[1])
+        # else:
+        #     special_f = f
+        print("special_f", special_f, f)
+        print("special_case_subs", special_case_subs)
+        # special_case = Piecewise((Integral(special_f, x), special_case_subs))
+        # special_case = special_f, special_case_subs
+        # special_case = (special_f, special_case_subs)
+        rewrite_special = _rewrite_single(special_f, x, find_special=False)
+        if False and rewrite_special:
+            print("rewrite_special", rewrite_special)
+            res_special, cond_special, _ = rewrite_special
+            special_case = res_special, And(cond_special, special_case_subs)
+            print("da special", special_case)
+        else:
+            special_case = special_f, special_case_subs
+
+    return special_case
+
 @cacheit
 @timeit
 def _rewrite_single(f, x, recursive=True, find_special=False):
@@ -1449,7 +1521,7 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
         _lookup_table = {}
         _create_lookup_table(_lookup_table)
 
-    special_case = None
+    special_case = None#[]
 
     if isinstance(f, meijerg):
         from sympy import factor
@@ -1472,6 +1544,7 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
         for formula, terms, cond, hint, special in l:
             subs = f.match(formula, old=True)
             if subs:
+                print("formula", formula)
                 subs_ = {}
                 for fro, to in subs.items():
                     subs_[fro] = unpolarify(polarify(to, lift=True),
@@ -1491,71 +1564,12 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                     # w = Wild("w", exclude=[z])
                     print("special_case subs unpolarified", unpolarify(special.subs(subs)))
                     special_case_subs = unpolarify(special.subs(subs))
-                    w = Wild("w", exclude = [0, z] + list(f.find(Function)))
-                    # w2 = Wild("w", exclude = [z] + list(f.find(Function)))
-                    w2 = Wild("w2")
-                    w3 = Wild("w", exclude = [z] + list(f.find(Function)))
-                    ww = Wild("ww", exclude=[0])
-                    if isinstance(special_case_subs, Eq):
-                        special_f = f.subs(*special_case_subs.args)
-                        # special_f = f
+                    special_f = f_ #special_f.subs(z, x)
 
-                        if 0 and isinstance(f, Function):
-                            # special_f = f.replace() f.func(*new_args)
-                            new_args = []
-                            for arg in f.args:
-                                new_args.append(arg.replace(w*(special_case_subs.args[0]), w*special_case_subs.args[1]))
-                            special_f = f.func(*new_args)
-
-                        # special_f = special_f.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False)
-                        for func in f.find(Function):
-                            # special_f = f.replace() f.func(*new_args)
-                            new_args = []
-                            for arg in func.args:
-                                new_args.append(arg.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False))
-                            special_f = special_f.replace(func, func.func(*new_args))
-
-
-                        # special_f = special_f.replace(ww*special_case_subs.args[0] + w2, ww*special_case_subs.args[1] + w2).replace(*special_case_subs.args)
-
-                        def replacer(rv):
-                            if isinstance(rv, Function):
-                                new_args = []
-                                for arg in f.args:
-                                    new_args.append(arg.replace(w*special_case_subs.args[0] + w2, w*special_case_subs.args[1] + w2, exact=False))
-                                return rv.func(*new_args)
-                            return rv
-
-                        from sympy import bottom_up
-
-                        # special_f = bottom_up(special_f, replacer)
-
-
-                        w1 = Wild("w1", exclude = [z] + list(f.find(Function)))
-                        w2 = Wild("w2", exclude = [z] + list(f.find(Function)))
-                        w3 = Wild("w3", exclude = [z] + list(f.find(Function)))
-                        # for func in special_f.find(Function):
-                            # w = Wild("w", exclude=[z, func])
-                            # special_f = special_f.replace(w1*func.func(w2*special_case_subs.args[0] + w3), func.func(w2*special_case_subs.args[1] + w3), exact=False)
-                            # special_f = special_f.replace(func.func(w2*special_case_subs.args[0] + w3), func.func(w2*special_case_subs.args[1] + w3), exact=False)
-
-                        # special_f = f.replace(w*special_case_subs.args[0], special_case_subs.args[1])
-                    # else:
-                    #     special_f = f
-                        special_f = special_f.subs(z, x)
-                        print("special_f", special_f, f_)
-                        print("special_case_subs", special_case_subs)
-                        # special_case = Piecewise((Integral(special_f, x), special_case_subs))
-                        # special_case = special_f, special_case_subs
-                        # special_case = (special_f, special_case_subs)
-                        rewrite_special = _rewrite_single(special_f, x, find_special=False)
-                        if False and rewrite_special:
-                            print("rewrite_special", rewrite_special)
-                            res_special, cond_special, _ = rewrite_special
-                            special_case = res_special, And(cond_special, special_case_subs)
-                            print("da special", special_case)
-                        else:
-                            special_case = special_f, special_case_subs
+                    if isinstance(special_case_subs, Or):
+                        pass
+                    elif isinstance(special_case_subs, Eq):
+                        special_case = process_special_case_eq(special_f, x, special_case_subs)
 
 
                 if not isinstance(terms, list):
