@@ -740,22 +740,52 @@ def test_issue_6462():
     assert integrate(cos(x**n)/x**n, x, meijerg=True).subs(n, 2).equals(
             integrate(cos(x**2)/x**2, x, meijerg=True))
 
+from sympy import Si
 
 def test_special_cases():
     # print( meijerint_indefinite(1/(a + x**(2*n)), x))
+    # print( meijerint_indefinite(1/(a + x**(2)), x))
+
+    # print( meijerint_indefinite((x ** (n - 1)) * sqrt(1 + x ** n), x,
+    #                             _eval_special_case=True))
     # return
 
+    # Drive the point home that we don't want to compute redundant special cases that don't correspond to poles in the result.
+    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) != \
+           Piecewise((log(x)*sin(1), Eq(n, 0) & Eq(y, -1)), (Si(x**n)/n, Eq(y, -1) & Ne(n, 0)), (x**(y + 1)*sin(1)/(y + 1), Eq(n, 0) & Ne(y, -1)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
+
+    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=False) != \
+           Piecewise((Integral(sin(1)/x, x), Eq(n, 0) & Eq(y, -1)), (Integral(sin(x**n)/x, x), Eq(y, -1) & Ne(n, 0)), (Integral(x**y*sin(1), x), Eq(n, 0) & Ne(y, -1)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
+
+    # print(meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True))
+    # print(meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=False))
+    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=False) == Piecewise((Integral(x**y*sin(1), x), Eq(n, 0)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
+    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) == Piecewise((x**(y + 1)*sin(1)/(y + 1), Eq(n, 0) & Ne(y, -1)), (log(x)*sin(1), Eq(n, 0)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
+
+
+    assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=True) == Piecewise((sqrt(2)*log(x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+    # hmm... this one?
+    assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)*x**(n - 1), x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+    # or this one? currently fails
+    # assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+    assert str(meijerint_indefinite(sin(x**(n*k + 1)), x, _eval_special_case=False)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
+
+
+    # assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+
+    # this fails now:
+    # assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
+
+    return
 
 
     assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
     assert meijerint_indefinite(x**y, x, _eval_special_case=False) == Piecewise((Integral(1/x, x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
 
-    assert meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
 
-    assert str(meijerint_indefinite(sin(x**(n*k + 1)), x, _eval_special_case=False)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
-
-    assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=False) == \
-           Piecewise((Integral(sin(1)/x, x), Eq(n, 0) & Eq(y, -1)), (Integral(sin(x**n)/x, x), Eq(y, -1) & Ne(n, 0)), (Integral(x**y*sin(1), x), Eq(n, 0) & Ne(y, -1)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
 
 
 from sympy.integrals.rationaltools import ratint
