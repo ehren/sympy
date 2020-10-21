@@ -1500,7 +1500,7 @@ def process_special_case_eq(f, x, special_case_subs):
             special_case = res_special, And(cond_special, special_case_subs)
             print("da special", special_case)
         else:
-            special_case = special_f, special_case_subs
+            special_case = special_f#, special_case_subs
 
     return special_case
 
@@ -1558,7 +1558,16 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                     cond = unpolarify(cond.subs(subs))
                 if _eval_cond(cond) == False:
                     continue
-                if find_special and special is not None:
+
+                if special is not None:
+                    print("found special_case", special)
+                    print("special_case subs", special.subs(subs))
+                    # w = Wild("w", exclude=[z])
+                    print("special_case subs unpolarified", unpolarify(special.subs(subs)))
+                    special_case_subs = unpolarify(special.subs(subs))
+                    special_case = special_case_subs
+
+                if 0 and find_special and special is not None:
                     print("found special_case", special)
                     print("special_case subs", special.subs(subs))
                     # w = Wild("w", exclude=[z])
@@ -1677,7 +1686,7 @@ def _rewrite1(f, x, recursive=True, find_special=False):
     fac, po, gm = _split_mul(f, x)
     g = _rewrite_single(gm, x, recursive, find_special)
     if g:
-        g_integrand, g_cond, g_special = g
+        g_integrand, g_cond, special_cond = g
 
 
 
@@ -1706,12 +1715,20 @@ def _rewrite1(f, x, recursive=True, find_special=False):
 
             # special.append((fac*spec_po*gm, spec_po_cond))
 
-        if g_special is not None:
+        if special_cond is not None:
             print("g[2]", g[2])
-            spec_f, spec_cond = g_special
+            # spec_f, spec_cond = g_special
+
+            if isinstance(special_cond, Eq):
+                # print("badabam", process_special_case_eq(fac*spec_f*po, x, spec_cond))
+                # print("badabam", process_special_case_eq(fac*po, x, spec_cond))
+                spec_fac = process_special_case_eq(fac, x, special_cond)
+                spec_po = process_special_case_eq(po, x, special_cond)
+                spec_gm = process_special_case_eq(gm, x, special_cond)
+
             # special.append((spec_f, spec_cond))
 
-            if spec_po is not None:
+            if 0 and spec_po is not None:
                 spec_f_spec_po = spec_f*fac*spec_po
                 special.append((spec_f_spec_po, And(spec_cond, spec_po_cond)))
                 print("da g", g)
@@ -1719,7 +1736,8 @@ def _rewrite1(f, x, recursive=True, find_special=False):
                 # special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
                 special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
 
-            special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
+            # special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
+            special.append((spec_fac*spec_po*spec_gm, special_cond))
 
 
 

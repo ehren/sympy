@@ -748,6 +748,7 @@ def test_special_cases():
 
     # print( meijerint_indefinite((x ** (n - 1)) * sqrt(1 + x ** n), x,
     #                             _eval_special_case=True))
+
     # return
 
     # Drive the point home that we don't want to compute redundant special cases that don't correspond to poles in the result.
@@ -765,11 +766,11 @@ def test_special_cases():
 
     assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=True) == Piecewise((sqrt(2)*log(x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
 
-    # hmm... this one?
-    assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)*x**(n - 1), x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+    # hmm... this one? no
+    # assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)*x**(n - 1), x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
 
-    # or this one? currently fails
-    # assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
+    # or this one? currently fails (now does not)
+    assert meijerint_indefinite((x**(n - 1))*sqrt(1 + x**n), x, _eval_special_case=False) == Piecewise((Integral(sqrt(2)/x, x), Eq(n, 0)), (2*x**n*sqrt(x**n + 1)/(3*n) + 2*sqrt(x**n + 1)/(3*n), True))
 
     assert str(meijerint_indefinite(sin(x**(n*k + 1)), x, _eval_special_case=False)) ==  "Piecewise((Integral(sin(1), x), Eq(k*n + 1, 0)), (x*x**(k*n)*x**(k*n/(k*n + 1))*x**(1/(k*n + 1))*gamma(1/2 + 1/(2*(k*n + 1)))*hyper((1/2 + 1/(2*(k*n + 1)),), (3/2, 3/2 + 1/(2*(k*n + 1))), -x**2*x**(2*k*n)/4)/(2*k*n*gamma(3/2 + 1/(2*(k*n + 1))) + 2*gamma(3/2 + 1/(2*(k*n + 1)))), True))"
 
