@@ -1528,7 +1528,8 @@ def test_issue_15124():
     omega = IndexedBase('omega')
     m, p = symbols('m p', cls=Idx)
     assert integrate(exp(x*I*(omega[m] + omega[p])), x, conds='none') == \
-        -I*exp(I*x*omega[m])*exp(I*x*omega[p])/(omega[m] + omega[p])
+        Piecewise((x, Eq(I*(omega[m] + omega[p]), 0)),
+                  (-I*exp(I*x*omega[m])*exp(I*x*omega[p])/(omega[m] + omega[p]), True))
 
 
 def test_issue_15218():
@@ -1664,7 +1665,7 @@ def test_issue_17473():
     x = Symbol('x')
     n = Symbol('n')
     assert integrate(sin(x**n), x) == \
-        Piecewise((Integral(sin(1), x), Eq(n, 0)),
+        Piecewise((x*sin(1), Eq(n, 0)),
                   (x*x**n*gamma(S(1)/2 + 1/(2*n))*hyper((S(1)/2 + 1/(2*n),),
                    (S(3)/2, S(3)/2 + 1/(2*n)),
                    -x**(2*n)/4)/(2*n*gamma(S(3)/2 + 1/(2*n))), True))
@@ -1680,7 +1681,8 @@ def test_issue_2975():
     w = Symbol('w')
     C = Symbol('C')
     y = Symbol('y')
-    assert integrate(1/(y**2+C)**(S(3)/2), (y, -w/2, w/2)) == w/(C**(S(3)/2)*sqrt(1 + w**2/(4*C)))
+    assert integrate(1/(y**2+C)**(S(3)/2), (y, -w/2, w/2)) == \
+        Piecewise((0, Eq(C, 0)), (w/(C**(S(3)/2)*sqrt(1 + w**2/(4*C))), True))
 
 
 def test_issue_7827():
@@ -1714,3 +1716,4 @@ def test_issue_17841():
 # test_issue_2975()
 # test_issue_4487()
 test_issue_15124()
+test_issue_14241()

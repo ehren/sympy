@@ -667,7 +667,7 @@ def test_issue_6252():
 
 
 
-    assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+    # assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
     # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
     # assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
     # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
@@ -708,7 +708,7 @@ def test_issue_8368():
 def test_issue_10211():
     from sympy.abc import h, w
     assert integrate((1/sqrt((y-x)**2 + h**2)**3), (x,0,w), (y,0,w)) == \
-        2*sqrt(1 + w**2/h**2)/h - 2/h
+        Piecewise((nan, Eq(h, 0)), (2*sqrt(1 + w**2/h**2)/h - 2/h, True))
 
 
 def test_issue_11806():
@@ -750,6 +750,7 @@ def test_special_cases():
     #                             _eval_special_case=True))
 
     # return
+    # assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
 
     # Drive the point home that we don't want to compute redundant special cases that don't correspond to poles in the result.
     assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) != \
@@ -820,10 +821,10 @@ y = symbols("y")
 # (zoo*a).is_zero
 
 # test_special_cases()
-# test_issue_6252()
+test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
-test_special_cases()
+# test_special_cases()
 
 
 def test_wtf():

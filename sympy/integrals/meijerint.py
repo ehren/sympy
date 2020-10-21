@@ -103,6 +103,8 @@ def _create_lookup_table(table):
     def constant(a):
         return [(a, meijerg([1], [], [], [0], z)),
                 (a, meijerg([], [1], [0], [], z))]
+    # from sympy import symbols
+    # spec = symbols("yowza")
     table[()] = [(a, constant(a), True, True, None)]
 
     # [P], Section 8.
@@ -131,6 +133,12 @@ def _create_lookup_table(table):
         gamma(a)*b**(a - 1), And(b > 0))
     add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
         hint=Not(IsNonPositiveInteger(a)), special_case=Eq(q, 0) | Eq(b, 0))
+    # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
+    #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0))
+    # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
+    #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0) | Eq(q, 0) | Eq(b, 0))  # adds trivial
+    # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
+    #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
         2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1)
     add((t**a - b**a)/(t - b), [0, a], [], [0, a], [], t/b,
@@ -1443,6 +1451,7 @@ def process_special_case_eq(f, x, special_case_subs):
     ww = Wild("ww", exclude=[0])
     special_f = f
     if isinstance(special_case_subs, Eq):
+        special_case_subs = special_case_subs.simplify()
         special_f = f.subs(*special_case_subs.args)
         # special_f = f
 
@@ -1725,6 +1734,7 @@ def _rewrite1(f, x, recursive=True, find_special=False):
                 spec_fac = process_special_case_eq(fac, x, special_cond)
                 spec_po = process_special_case_eq(po, x, special_cond)
                 spec_gm = process_special_case_eq(gm, x, special_cond)
+                special.append((spec_fac*spec_po*spec_gm, special_cond))
 
             # special.append((spec_f, spec_cond))
 
@@ -1737,7 +1747,6 @@ def _rewrite1(f, x, recursive=True, find_special=False):
                 special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
 
             # special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
-            special.append((spec_fac*spec_po*spec_gm, special_cond))
 
 
 
@@ -1832,14 +1841,17 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
         if spec:
             # spec = spec[0].subs(x, x - a), spec[1]
             spec = [(i.subs(x, x - a), c) for i, c in spec]
-        if spec:
-            conditional_results.extend(spec)
         res_cond = S.true
         if splitting_points_used:
             if not a.is_Number:
                 for s in splitting_points_used:
                     res_cond &= Ne(a, s)
+                    if spec:
+                        spec = [(i, c & Ne(a, s)) for i, c in spec]
+
                 print("res cond", res_cond)
+        if spec:
+            conditional_results.extend(spec)
         splitting_points_used.append(a)
         print("my spec", spec)
 
@@ -1859,8 +1871,10 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
             return 0
         elif c is S.true:
             return 1
-        else:
+        elif item in spec:
             return -1
+        else:
+            return -2
 
     print("presorted", conditional_results)
     conditional_results = sorted(conditional_results, key=compare)
@@ -1998,6 +2012,8 @@ def _meijerint_indefinite_1(f, x, eval_special_case=True):
 
         # special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
         special = [ (ifunc(integrand, x), cond) if integrand != f else (Integral(f, x), cond) for integrand, cond in special]
+
+        print("turned into integrals", special)
 
         # special = special[0]
         # special = Integral(special[0], x), special[1]
