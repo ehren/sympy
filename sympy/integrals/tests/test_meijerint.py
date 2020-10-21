@@ -742,6 +742,10 @@ def test_issue_6462():
 
 
 def test_special_cases():
+    print( meijerint_indefinite(1/(a + x**(2*n)), x))
+    return
+
+
 
     assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
     assert meijerint_indefinite(x**y, x, _eval_special_case=False) == Piecewise((Integral(1/x, x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
@@ -784,8 +788,24 @@ y = symbols("y")
 # from sympy import zoo
 # (zoo*a).is_zero
 
-test_special_cases()
-test_issue_6252()
+# test_special_cases()
+# test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
-# test_special_cases()
+test_special_cases()
+
+
+def test_wtf():
+    from sympy import Function,Wild
+    F=Function("F")
+    w = Wild("w", exclude=[F])
+    w = Wild("w", )
+    f = F(a)
+    patt = w*a
+    print(f.replace(patt,0 , map=True))
+    # print(f.match(patt,0))
+    # print(f.replace(patt,0 ,exact=True))
+    # print(f.xreplace({patt:0}))
+    # pass
+
+# test_wtf()
