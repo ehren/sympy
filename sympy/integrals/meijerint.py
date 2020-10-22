@@ -78,8 +78,9 @@ def _create_lookup_table(table):
     t = p*z**q
     from sympy import Eq
     # trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
-    trivial_case = S.false #Eq(p, 0) | Eq(q, 0)
     trivial_case = Eq(p, 0) | Eq(q, 0)
+    # trivial_case = Eq(p, 0) | Eq(q, 0)
+    # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(q, 0)
     # trivial_case = Eq(q, -1)
 
@@ -132,14 +133,16 @@ def _create_lookup_table(table):
         gamma(a)*b**(a - 1), And(b > 0))
     add(Heaviside((b/p)**(1/q) - z)*(b - t)**(a - 1), [], [a], [0], [], t/b,
         gamma(a)*b**(a - 1), And(b > 0))
-    add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(q, 0) | Eq(b, 0))
+    # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
+    #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(q, 0) | Eq(b, 0))
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0))
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0) | Eq(q, 0) | Eq(b, 0))  # adds trivial
+    add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
+        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-    #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
+    #     hint=Not(IsNonPositiveInteger(a)))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
         2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1)
     add((t**a - b**a)/(t - b), [0, a], [], [0, a], [], t/b,
@@ -1874,6 +1877,9 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
     found_closed_form = False
     has_closed_form = Dummy("has_closed_form")
 
+    ne_dummy = Dummy("ne_dummy")
+    w = Wild("w")
+
     for a in all_splitting_points:
         print("splitting point a", a)
         res, spec = _meijerint_indefinite_1(f.subs(x, x + a), x, eval_special_case=_eval_special_case)
@@ -1883,15 +1889,20 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
         if spec:
             # spec = spec[0].subs(x, x - a), spec[1]
             spec = [(i.subs(x, x - a), c) for i, c in spec]
-        res_cond = S.true
+            # spec = [(i.subs(x, x - a), c & Ne(ne_dummy, a)) for i, c in spec]
+        res_cond = S.true#Ne(ne_dummy, a)
         if splitting_points_used:
-            if not a.is_Number:
-                for s in splitting_points_used:
-                    res_cond &= Ne(a, s)
-                    if spec:
-                        spec = [(i, c & Ne(a, s)) for i, c in spec]
+            # if not a.is_Number:
+            for s in splitting_points_used:
+                res_cond &= Ne(a, s)
+                if spec:
+                    spec = [(i, c & Ne(a, s)) for i, c in spec]
+            # conditional_results = [ (r, c.replace(Ne(ne_dummy, w), Ne(ne_dummy, w) & Ne(a, c))) for r, c in conditional_results]
+                # for r, c in conditional_results:
+                #     c =
 
-                print("res cond", res_cond)
+
+            print("res cond", res_cond)
         if spec:
             conditional_results.extend(spec)
         splitting_points_used.append(a)
@@ -1905,6 +1916,8 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
 
         if found_closed_form:
             break
+    # print("pre conditional", conditional_results)
+    # conditional_results = [(r, c.replace(Ne(ne_dummy, w), S.true)) for r, c in conditional_results]
 
     def compare(item):
         r, c = item

@@ -659,7 +659,9 @@ def test_issue_6122():
 def test_issue_6252():
     from sympy import sympify, gammasimp, hyperexpand
     expr = 1/x/(a + b*x)**Rational(1, 3)
-    # anti = integrate(expr, x, meijerg=True)
+    anti = integrate(expr, x, meijerg=True)
+    # anti = meijerint_indefinite(expr, x, _eval_special_case=1)
+    # return
     anti = meijerint_indefinite(expr, x, _eval_special_case=False)
     # XXX the expression is a mess, but actually upon differentiation and
     # putting in numerical values seems to work at least for the Ne(a/b, 0)
@@ -668,7 +670,7 @@ def test_issue_6252():
 
 
 
-    # no:
+    # no?:
     # assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
 
     # print(ant
@@ -692,12 +694,58 @@ def test_issue_6252():
     # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
     # assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
     # assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
-    return
     # assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
-    assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
-    print(anti.subs(b,0))
 
-    # assert anti.subs({b : 0, a: 0}) == zoo*log(x)
+    from sympy import sympify, gammasimp, hyperexpand
+    expr = 1/x/(a + b*x)**Rational(1, 3)
+    # anti = integrate(expr, x, meijerg=True)
+    anti = meijerint_indefinite(expr, x, _eval_special_case=True)
+
+    assert anti == sympify("Piecewise((-3/(b**(1/3)*x**(1/3)), Eq(a, 0)), (log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"a": a, "b": b, "x": x})
+
+    # TODO need to consider whether the above is too pedentic. Note that:
+    # >>> sympify("(-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)))",locals=locals())
+    # -gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3))
+    # >>> _.subs(a,0)
+    # -gamma(1/3)*hyper((1/3, 1/3), (4/3,), 0)/(b**(1/3)*x**(1/3)*gamma(4/3))
+    # >>> hyperexpand(_)
+    # -gamma(1/3)/(b**(1/3)*x**(1/3)*gamma(4/3))
+    # >>> simplify(_)
+    # -3/(b**(1/3)*x**(1/3))
+
+
+
+    # XXX the expression is a mess, but actually upon differentiation and
+    # putting in numerical values seems to work at least for the Ne(a/b, 0)
+    # case and the specific values tested below.
+    # TODO Ne(a/b, 0) case could use atan
+
+
+
+    # no:
+    # assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+
+    # print(ant
+    # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
+
+    # assert anti.subs(b, 0) == Piecewise((Integral(zoo/x, x), Eq(a, 0)), (Integral(1/(a**(S(1)/3)*x), x), True))
+    print(anti.subs(b, 0))
+    # assert anti.subs(b, 0) == Piecewise((log(x)*zoo, Eq(a, 0)), (log(x)/a**(S(1)/3), True))
+    # assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
+    # assert anti.subs({b: 0, a:0})
+
+
+    # print(anti.subs(b, 0))
+    # print(anti.subs({b: 0, a:0}))
+    # print(anti.subs({a: 0}))
+    bnz = symbols("bnz", zero=False)
+    print(anti.subs({b: bnz}))
+
+    # assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
+    # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
+    # assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
+    # assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
+    # assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
 
 
 def test_issue_6348():
@@ -854,14 +902,14 @@ y = symbols("y")
 # (zoo*a).is_zero
 # print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
 
-# test_special_cases()
+test_special_cases()
 # test_issue_8368()
 # test_issue_10211()
 # print(meijerint_indefinite(sin(x**n)*x**y*x**b, x))
 # print(integrate(sin(x**n)*(x**(n-1))*sqrt(1+x**n), x))
 # test_special_cases()
-# test_issue_6252()
-test_issue_10681()
+test_issue_6252()
+# test_issue_10681()
 
 
 def test_wtf():
