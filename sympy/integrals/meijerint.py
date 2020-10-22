@@ -79,7 +79,7 @@ def _create_lookup_table(table):
     from sympy import Eq
     # trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
     trivial_case = S.false #Eq(p, 0) | Eq(q, 0)
-    # trivial_case = Eq(p, 0) | Eq(q, 0)
+    trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(q, 0)
     # trivial_case = Eq(q, -1)
 
@@ -1503,7 +1503,7 @@ def process_special_case_eq(f, x, special_case_subs):
         # special_case = Piecewise((Integral(special_f, x), special_case_subs))
         # special_case = special_f, special_case_subs
         # special_case = (special_f, special_case_subs)
-        rewrite_special = _rewrite_single(special_f, x, find_special=False)
+        # rewrite_special = _rewrite_single(special_f, x, find_special=False)
         if False and rewrite_special:
             print("rewrite_special", rewrite_special)
             res_special, cond_special, _ = rewrite_special
@@ -1684,6 +1684,13 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
     return res, True, special_case
 
 
+def process_split_special_case_eq(fac, po, gm, x, special_cond):
+    spec_fac = process_special_case_eq(fac, x, special_cond)
+    spec_po = process_special_case_eq(po, x, special_cond)
+    spec_gm = process_special_case_eq(gm, x, special_cond)
+    return spec_fac*spec_po*spec_gm, special_cond
+
+
 def _rewrite1(f, x, recursive=True, find_special=False):
     """
     Try to rewrite f using a (sum of) single G functions with argument a*x**b.
@@ -1732,10 +1739,23 @@ def _rewrite1(f, x, recursive=True, find_special=False):
             if isinstance(special_cond, Eq):
                 # print("badabam", process_special_case_eq(fac*spec_f*po, x, spec_cond))
                 # print("badabam", process_special_case_eq(fac*po, x, spec_cond))
-                spec_fac = process_special_case_eq(fac, x, special_cond)
-                spec_po = process_special_case_eq(po, x, special_cond)
-                spec_gm = process_special_case_eq(gm, x, special_cond)
-                special.append((spec_fac*spec_po*spec_gm, special_cond))
+
+
+                # spec_fac = process_special_case_eq(fac, x, special_cond)
+                # spec_po = process_special_case_eq(po, x, special_cond)
+                # spec_gm = process_special_case_eq(gm, x, special_cond)
+                # special.append((spec_fac*spec_po*spec_gm, special_cond))
+
+                special.append(process_split_special_case_eq(fac, po, gm, x, special_cond))
+            elif isinstance(special_cond, Or):
+                for disjunct in special_cond.args:
+                    assert isinstance(disjunct, Eq)
+
+                    special.append(process_split_special_case_eq(fac, po, gm, x, disjunct))
+
+            elif special_cond is not S.true and special_cond is not S.false:
+                print("what is this special cond", special_cond)
+                assert 0
 
             # special.append((spec_f, spec_cond))
 
@@ -1748,6 +1768,27 @@ def _rewrite1(f, x, recursive=True, find_special=False):
                 special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
 
             # special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
+
+        if 0 and isinstance(po, Pow) and po.exp.is_zero is None:
+            print("fac, po, g", fac, po.base**-1, g)
+            print("f", f)
+            # print("po replace", f.subs(po.exp, -1))
+            # simped = Eq(po.exp, -1).simplify()
+            # f_subs = f.subs(po.exp, -1).subs(*simped.args)
+            # print("po replace", f_subs)
+            # special.append((f_subs, simped))
+            spec_po = po.base**-1
+            spec_po_cond = Eq(po.exp, -1)
+
+            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+
+            # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
+            # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
+
+            print("simple spec po", (fac*spec_po*gm, spec_po_cond))
+
+            # special.append((fac*spec_po*gm, spec_po_cond))
 
 
 

@@ -1,6 +1,6 @@
 from sympy import (meijerg, I, S, integrate, Integral, oo, gamma, cosh, sinc,
                    hyperexpand, exp, simplify, sqrt, pi, erf, erfc, sin, cos,
-                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise, sympify, Abs, Eq, Ne, zoo)
+                   exp_polar, polygamma, hyper, log, expand_func, Rational, Piecewise, sympify, Abs, Eq, Ne, zoo, nan)
 from sympy.integrals.meijerint import (_rewrite_single, _rewrite1,
         meijerint_indefinite, _inflate_g, _create_lookup_table,
         meijerint_definite, meijerint_inversion)
@@ -659,7 +659,8 @@ def test_issue_6122():
 def test_issue_6252():
     from sympy import sympify, gammasimp, hyperexpand
     expr = 1/x/(a + b*x)**Rational(1, 3)
-    anti = integrate(expr, x, meijerg=True)
+    # anti = integrate(expr, x, meijerg=True)
+    anti = meijerint_indefinite(expr, x, _eval_special_case=False)
     # XXX the expression is a mess, but actually upon differentiation and
     # putting in numerical values seems to work at least for the Ne(a/b, 0)
     # case and the specific values tested below.
@@ -667,13 +668,32 @@ def test_issue_6252():
 
 
 
+    # no:
     # assert anti == sympify("Piecewise((log(x)/a**(1/3), Eq(b, 0)), (2*log(1 - b**(1/3)*(a/b + x)**(1/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(2*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)) + 2*exp(-2*I*pi/3)*log(1 - b**(1/3)*(a/b + x)**(1/3)*exp_polar(4*I*pi/3)/a**(1/3))*gamma(2/3)/(3*a**(1/3)*gamma(5/3)), Ne(a/b, 0)), (-gamma(1/3)*hyper((1/3, 1/3), (4/3,), a*exp_polar(I*pi)/(b*x))/(b**(1/3)*x**(1/3)*gamma(4/3)), True))", locals={"x": x, "a": a, "b": b})
+
+    # print(ant
     # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
+
+    assert anti.subs(b, 0) == Piecewise((Integral(zoo/x, x), Eq(a, 0)), (Integral(1/(a**(S(1)/3)*x), x), True))
+    assert anti.subs(b, 0).doit() == Piecewise((log(x)*zoo, Eq(a, 0)), (log(x)/a**(S(1)/3), True))
+    assert anti.subs(a, 0) == Integral(1/(x*(b*x)**(S(1)/3)), x)
+    assert anti.subs(a, 0).doit() == -3/(b**(S(1)/3)*x**(S(1)/3))
+    assert anti.subs({b: 0, a:0}) == Integral(zoo/x, x)
+    assert anti.subs({b: 0, a:0}).doit() == log(x)*zoo
+
+
+    # print(anti.subs(b, 0))
+    # print(anti.subs({b: 0, a:0}))
+    # print(anti.subs({a: 0}))
+    bnz = symbols("bnz", zero=False)
+    print(anti.subs({b: bnz}))
+
     # assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
     # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
     # assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
-    bnz = symbols("bnz", zero=False)
     # assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
+    return
+    # assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
     assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
     print(anti.subs(b,0))
 
@@ -719,13 +739,22 @@ def test_issue_11806():
     assert integrate(1/sqrt(x**2 + y**2)**3, (x, -L, L)) == \
         2*L/(y**2*sqrt(L**2 + y**2))
 
+
 def test_issue_10681():
     from sympy import RR
     from sympy.abc import R, r
     f = integrate(r**2*(R**2-r**2)**0.5, r, meijerg=True)
+
+    assert f.func is Piecewise
+    assert len(f.args) == 2
+    print(f)
+
+    assert f.args[0] == (0.25*I*r**3*(r**2)**0.5, Eq(R**2, 0))
+
+    assert f.args[1][1] == True
     g = (1.0/3)*R**1.0*r**3*hyper((-0.5, Rational(3, 2)), (Rational(5, 2),),
                                   r**2*exp_polar(2*I*pi)/R**2)
-    assert RR.almosteq((f/g).n(), 1.0, 1e-12)
+    assert RR.almosteq((f.args[1][0]/g).n(), 1.0, 1e-12)
 
 def test_issue_13536():
     from sympy import Symbol
@@ -826,10 +855,13 @@ y = symbols("y")
 # print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
 
 # test_special_cases()
-# test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
-test_special_cases()
+# print(meijerint_indefinite(sin(x**n)*x**y*x**b, x))
+# print(integrate(sin(x**n)*(x**(n-1))*sqrt(1+x**n), x))
+# test_special_cases()
+# test_issue_6252()
+test_issue_10681()
 
 
 def test_wtf():
