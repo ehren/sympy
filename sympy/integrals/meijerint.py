@@ -79,6 +79,7 @@ def _create_lookup_table(table):
     from sympy import Eq
     # trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
     trivial_case = S.false #Eq(p, 0) | Eq(q, 0)
+    # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(q, 0)
     # trivial_case = Eq(q, -1)
 

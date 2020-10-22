@@ -671,11 +671,13 @@ def test_issue_6252():
     # assert anti.subs(b, 0).doit() == log(x)/a**(S(1)/3)  # needs assumptions fix
     # assert anti.subs(b, 0).doit() == Piecewise((0, Ne(zoo*a, 0)), (Integral(1/(a**(1/3)*x), x), True))
     # assert anti.subs(b, 0) = Integral(1/(a**(1/3)*x), x), True))
-    assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
+    # assert anti.subs(b, 0) == log(x)/a**(S(1)/3)
     bnz = symbols("bnz", zero=False)
-    assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
+    # assert gammasimp(hyperexpand(anti.subs({a : 0, b : bnz}))) == -3/(bnz**(S(1)/3)*x**(S(1)/3))
+    assert anti.subs(a, 0) == -3/(b**(S(1)/3)*x**(S(1)/3))
+    print(anti.subs(b,0))
 
-    assert anti.subs({b : 0, a: 0}) == zoo*log(x)
+    # assert anti.subs({b : 0, a: 0}) == zoo*log(x)
 
 
 def test_issue_6348():
@@ -740,7 +742,7 @@ def test_issue_6462():
     assert integrate(cos(x**n)/x**n, x, meijerg=True).subs(n, 2).equals(
             integrate(cos(x**2)/x**2, x, meijerg=True))
 
-from sympy import Si
+from sympy import Si, atan, polar_lift
 
 def test_special_cases():
     # print( meijerint_indefinite(1/(a + x**(2*n)), x))
@@ -751,6 +753,9 @@ def test_special_cases():
 
     # return
     # assert meijerint_indefinite(x**y, x) == Piecewise((log(x), Eq(y, -1)), (x*x**y*gamma(y + 1)/gamma(y + 2), Abs(x) < 1), (meijerg(((1,), (y + 2,)), ((y + 1,), (0,)), x) + meijerg(((y + 2, 1), ()), ((), (y + 1, 0)), x), True))
+
+    assert meijerint_indefinite(1/(a**5 - a + x**2 + 1), x, _eval_special_case=True) == Piecewise((-1/x, Eq(a**5 - a + 1, 0)), (atan(x/sqrt(polar_lift(a**5 - a + 1)))/sqrt(polar_lift(a**5 - a + 1)), True))
+    assert meijerint_indefinite(1/(a**5 - a + x**2 + 1), x, _eval_special_case=False) == Piecewise((Integral(x**(-2), x), Eq(a**5 - a + 1, 0)), (atan(x/sqrt(polar_lift(a**5 - a + 1)))/sqrt(polar_lift(a**5 - a + 1)), True))
 
     # Drive the point home that we don't want to compute redundant special cases that don't correspond to poles in the result.
     assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) != \
@@ -810,7 +815,6 @@ y = symbols("y")
 # print(meijerint_indefinite((x**(n-1))*sqrt(1+x**n), x))
 # print(meijerint_indefinite((x**(n-2))*sqrt(1+x**n), x))
 # print(integrate((x**(n-2))*sqrt(1+x**n), x, heurisch=True))
-# print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
 # print(integrate(sin(x**(n*k + 1)), x, meijerg=True))
 # print(integrate(sin(x**(n*k + 1)), x))
 # print(meijerint_indefinite(x**y, x))
@@ -819,12 +823,13 @@ y = symbols("y")
 
 # from sympy import zoo
 # (zoo*a).is_zero
+# print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
 
 # test_special_cases()
-test_issue_6252()
+# test_issue_6252()
 # test_issue_8368()
 # test_issue_10211()
-# test_special_cases()
+test_special_cases()
 
 
 def test_wtf():
