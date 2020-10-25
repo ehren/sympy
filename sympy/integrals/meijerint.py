@@ -80,9 +80,9 @@ def _create_lookup_table(table):
     trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(p, 0) | Eq(q, 0)
-    # trivial_case = Eq(p, 0) | Eq(q, 0)
+    trivial_case = Eq(p, 0) | Eq(q, 0)  # q=0 needed for issue testcase, p = 0 needed for Eq(b, 0) 6252 testcase
     # trivial_case = Eq(q, 0)
-    trivial_case = Eq(q, 0)  # needed for issue testcase
+    # trivial_case = Eq(q, 0)  # needed for issue testcase
     # trivial_case = Eq(q, -1)
 
     def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=None):
