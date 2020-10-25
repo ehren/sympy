@@ -77,11 +77,12 @@ def _create_lookup_table(table):
     n = Wild('n', properties=[lambda x: x.is_Integer and x > 0])
     t = p*z**q
     from sympy import Eq
-    # trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
-    trivial_case = Eq(p, 0) | Eq(q, 0)
+    trivial_case = S.false#Eq(p, 0) | Eq(q, 0)
+    # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(q, 0)
+    trivial_case = Eq(q, 0)  # needed for issue testcase
     # trivial_case = Eq(q, -1)
 
     def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=None):
@@ -140,7 +141,7 @@ def _create_lookup_table(table):
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0) | Eq(q, 0) | Eq(b, 0))  # adds trivial
     add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0))
+        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0)) # adds trivial for 6252 testcase but needed for atan testcase
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
@@ -1572,14 +1573,6 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                 if _eval_cond(cond) == False:
                     continue
 
-                if special is not None:
-                    print("found special_case", special)
-                    print("special_case subs", special.subs(subs))
-                    # w = Wild("w", exclude=[z])
-                    print("special_case subs unpolarified", unpolarify(special.subs(subs)))
-                    special_case_subs = unpolarify(special.subs(subs))
-                    special_case = special_case_subs
-
                 if 0 and find_special and special is not None:
                     print("found special_case", special)
                     print("special_case subs", special.subs(subs))
@@ -1613,6 +1606,23 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                                 unpolarify(g.argument, exponents_only=True))
                     res.append(r1 + (g,))
                 if res:
+
+                    if special is not None:
+                        print("found special_case", special)
+                        print("about to use subs dict", subs)
+                        print("special_case subs", special.subs(subs))
+                        special_case_subs = special.subs(subs)
+                        if special_case_subs == special:
+                            print("no match for special case")
+                        else:
+                            # w = Wild("w", exclude=[z])
+                            special_case_subs = unpolarify(special_case_subs)
+                            print("special_case subs unpolarified", special_case_subs)
+                            # if special_case_subs is not S.true and special_case_subs is not S.false:
+                            if special_case_subs not in [S.true, S.false]: # and special_case_subs is not S.false:
+                                special_case = special_case_subs
+
+
                     return res, cond, special_case
 
     # try recursive mellin transform
@@ -1710,115 +1720,116 @@ def _rewrite1(f, x, recursive=True, find_special=False):
 
 
 
-        special = []
-        print("po", po)
-        spec_po = None
-        spec_po_cond = S.false
-        if 0 and find_special and isinstance(po, Pow) and po.exp.is_zero is None:
-            print("fac, po, g", fac, po.base**-1, g)
-            print("f", f)
-            # print("po replace", f.subs(po.exp, -1))
-            # simped = Eq(po.exp, -1).simplify()
-            # f_subs = f.subs(po.exp, -1).subs(*simped.args)
-            # print("po replace", f_subs)
-            # special.append((f_subs, simped))
-            spec_po = po.base**-1
-            spec_po_cond = Eq(po.exp, -1)
+        if 0:
+            special = []
+            print("po", po)
+            spec_po = None
+            spec_po_cond = S.false
+            if 0 and find_special and isinstance(po, Pow) and po.exp.is_zero is None:
+                print("fac, po, g", fac, po.base**-1, g)
+                print("f", f)
+                # print("po replace", f.subs(po.exp, -1))
+                # simped = Eq(po.exp, -1).simplify()
+                # f_subs = f.subs(po.exp, -1).subs(*simped.args)
+                # print("po replace", f_subs)
+                # special.append((f_subs, simped))
+                spec_po = po.base**-1
+                spec_po_cond = Eq(po.exp, -1)
 
-            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
-            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+                # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+                # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
 
-            # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
-            # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
+                # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
+                # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
 
-            print("simple spec po", (fac*spec_po*gm, spec_po_cond))
+                print("simple spec po", (fac*spec_po*gm, spec_po_cond))
 
-            # special.append((fac*spec_po*gm, spec_po_cond))
+                # special.append((fac*spec_po*gm, spec_po_cond))
 
-        if special_cond is not None:
-            print("g[2]", g[2])
-            # spec_f, spec_cond = g_special
+            if special_cond is not None:
+                print("g[2]", g[2])
+                # spec_f, spec_cond = g_special
 
-            if isinstance(special_cond, Eq):
-                # print("badabam", process_special_case_eq(fac*spec_f*po, x, spec_cond))
-                # print("badabam", process_special_case_eq(fac*po, x, spec_cond))
-
-
-                # spec_fac = process_special_case_eq(fac, x, special_cond)
-                # spec_po = process_special_case_eq(po, x, special_cond)
-                # spec_gm = process_special_case_eq(gm, x, special_cond)
-                # special.append((spec_fac*spec_po*spec_gm, special_cond))
-
-                special.append(process_split_special_case_eq(fac, po, gm, x, special_cond))
-            elif isinstance(special_cond, Or):
-                for disjunct in special_cond.args:
-                    assert isinstance(disjunct, Eq)
-
-                    special.append(process_split_special_case_eq(fac, po, gm, x, disjunct))
-
-            elif special_cond is not S.true and special_cond is not S.false:
-                print("what is this special cond", special_cond)
-                assert 0
-
-            # special.append((spec_f, spec_cond))
-
-            if 0 and spec_po is not None:
-                spec_f_spec_po = spec_f*fac*spec_po
-                special.append((spec_f_spec_po, And(spec_cond, spec_po_cond)))
-                print("da g", g)
-                # special.append((fac*spec_po*gm, Or(And(~spec_cond, spec_po_cond), ~S(g[1]))))
-                # special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
-                special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
-
-            # special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
-
-        if 0 and isinstance(po, Pow) and po.exp.is_zero is None:
-            print("fac, po, g", fac, po.base**-1, g)
-            print("f", f)
-            # print("po replace", f.subs(po.exp, -1))
-            # simped = Eq(po.exp, -1).simplify()
-            # f_subs = f.subs(po.exp, -1).subs(*simped.args)
-            # print("po replace", f_subs)
-            # special.append((f_subs, simped))
-            spec_po = po.base**-1
-            spec_po_cond = Eq(po.exp, -1)
-
-            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
-            # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
-
-            # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
-            # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
-
-            print("simple spec po", (fac*spec_po*gm, spec_po_cond))
-
-            # special.append((fac*spec_po*gm, spec_po_cond))
+                if isinstance(special_cond, Eq):
+                    # print("badabam", process_special_case_eq(fac*spec_f*po, x, spec_cond))
+                    # print("badabam", process_special_case_eq(fac*po, x, spec_cond))
 
 
+                    # spec_fac = process_special_case_eq(fac, x, special_cond)
+                    # spec_po = process_special_case_eq(po, x, special_cond)
+                    # spec_gm = process_special_case_eq(gm, x, special_cond)
+                    # special.append((spec_fac*spec_po*spec_gm, special_cond))
 
-        elif spec_po is not None:
-            special.append((fac*spec_po*gm, spec_po_cond))
+                    special.append(process_split_special_case_eq(fac, po, gm, x, special_cond))
+                elif isinstance(special_cond, Or):
+                    for disjunct in special_cond.args:
+                        assert isinstance(disjunct, Eq)
+
+                        special.append(process_split_special_case_eq(fac, po, gm, x, disjunct))
+
+                elif special_cond is not S.true and special_cond is not S.false:
+                    print("what is this special cond", special_cond)
+                    assert 0
+
+                # special.append((spec_f, spec_cond))
+
+                if 0 and spec_po is not None:
+                    spec_f_spec_po = spec_f*fac*spec_po
+                    special.append((spec_f_spec_po, And(spec_cond, spec_po_cond)))
+                    print("da g", g)
+                    # special.append((fac*spec_po*gm, Or(And(~spec_cond, spec_po_cond), ~S(g[1]))))
+                    # special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond, ~S(g[1]))))
+                    special.append((fac*spec_po*gm, And(~spec_cond, spec_po_cond)))
+
+                # special.append((fac*spec_f*po, And(spec_cond, ~spec_po_cond)))
+
+            if 0 and isinstance(po, Pow) and po.exp.is_zero is None:
+                print("fac, po, g", fac, po.base**-1, g)
+                print("f", f)
+                # print("po replace", f.subs(po.exp, -1))
+                # simped = Eq(po.exp, -1).simplify()
+                # f_subs = f.subs(po.exp, -1).subs(*simped.args)
+                # print("po replace", f_subs)
+                # special.append((f_subs, simped))
+                spec_po = po.base**-1
+                spec_po_cond = Eq(po.exp, -1)
+
+                # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+                # special.append((f.subs(po.exp, -1), Eq(po.exp, -1)))
+
+                # special.append((fac, po.base**-1, g[0], And(g[1], Eq(po.exp, -1))))
+                # special.append(fac*po.base**-1*g, Eq(po.exp, -1))
+
+                print("simple spec po", (fac*spec_po*gm, spec_po_cond))
+
+                # special.append((fac*spec_po*gm, spec_po_cond))
 
 
-        if False and spec_po is not po:
-            # if False:
-            print("i has problem")
-            spec_spec = fac*spec_po*gm
-            print("spec spec", spec_spec)
-            # print("spec f", spec_f)
-            # s_fac, s_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
-            # special.append((spec_f, spec_po_cond))
-            # assert False
 
-            # special.append(g[2]*po)
+            elif spec_po is not None:
+                special.append((fac*spec_po*gm, spec_po_cond))
 
-            # special.append((spec_f, spec_cond))
 
-            # spec_fac, spec_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
+            if False and spec_po is not po:
+                # if False:
+                print("i has problem")
+                spec_spec = fac*spec_po*gm
+                print("spec spec", spec_spec)
+                # print("spec f", spec_f)
+                # s_fac, s_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
+                # special.append((spec_f, spec_po_cond))
+                # assert False
 
-            # special.append((spec_fac, spec_po, spec_g, And(spec_cond, spec_spec_cond)))
-            # special.append(g[2])
+                # special.append(g[2]*po)
 
-        return fac, po, g_integrand, g_cond, special
+                # special.append((spec_f, spec_cond))
+
+                # spec_fac, spec_po, spec_g, spec_spec_cond, _ = _rewrite1(spec_f, x, find_special=False)
+
+                # special.append((spec_fac, spec_po, spec_g, And(spec_cond, spec_spec_cond)))
+                # special.append(g[2])
+
+        return fac, po, g_integrand, g_cond, special_cond
 
 
 def _rewrite2(f, x):
@@ -1874,39 +1885,46 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
 
     splitting_points_used = []
     conditional_results = []
+    special_conditions = []
     found_closed_form = False
     has_closed_form = Dummy("has_closed_form")
 
     ne_dummy = Dummy("ne_dummy")
     w = Wild("w")
+    from sympy import Integral
 
     for a in all_splitting_points:
         print("splitting point a", a)
-        res, spec = _meijerint_indefinite_1(f.subs(x, x + a), x, eval_special_case=_eval_special_case)
+        res, special_cond = _meijerint_indefinite_1(f.subs(x, x + a), x, eval_special_case=_eval_special_case)
         if not res:
             continue
         res = res.subs(x, x - a)
-        if spec:
+        if 0 and spec:
             # spec = spec[0].subs(x, x - a), spec[1]
-            spec = [(i.subs(x, x - a), c) for i, c in spec]
+            # spec = [(i.subs(x, x - a), c) for i, c in spec]
+            _x = Dummy("x") # be careful with unevaluated integrals
+            spec = [(i.replace(Integral(w, x), Integral(w, _x)).subs(x, x - a).subs(_x, x), c) for i, c in spec]
             # spec = [(i.subs(x, x - a), c & Ne(ne_dummy, a)) for i, c in spec]
         res_cond = S.true#Ne(ne_dummy, a)
         if splitting_points_used:
             # if not a.is_Number:
             for s in splitting_points_used:
                 res_cond &= Ne(a, s)
-                if spec:
-                    spec = [(i, c & Ne(a, s)) for i, c in spec]
+                if special_cond is not None:
+                    # spec = [(i, c & Ne(a, s)) for i, c in spec]
+                    special_cond = special_cond & Ne(a, s)
             # conditional_results = [ (r, c.replace(Ne(ne_dummy, w), Ne(ne_dummy, w) & Ne(a, c))) for r, c in conditional_results]
                 # for r, c in conditional_results:
                 #     c =
 
 
             print("res cond", res_cond)
-        if spec:
-            conditional_results.extend(spec)
+        # if spec:
+        #     conditional_results.extend(spec)
         splitting_points_used.append(a)
-        print("my spec", spec)
+        print("my spec", special_cond)
+        if special_cond is not None:
+            special_conditions.append(special_cond)
 
         if not _has(res, hyper, meijerg):
             found_closed_form = True
@@ -1919,6 +1937,38 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
     # print("pre conditional", conditional_results)
     # conditional_results = [(r, c.replace(Ne(ne_dummy, w), S.true)) for r, c in conditional_results]
 
+    # prune false special conditions (e.g. those invalidated by the symbolic splitting point condition above)
+    print("special_conditions unpruned", special_conditions)
+    special_conditions = [s for s in special_conditions if s is not S.false]
+
+    print("special_conditions pruned", special_conditions)
+
+    new_special_conditions = []
+
+    for cond in special_conditions:
+        if isinstance(cond, Or):
+            for disjunct in cond.args:
+                assert isinstance(disjunct, Eq)
+                new_special_conditions.append(disjunct)
+        else:
+            assert isinstance(cond, Eq)
+            new_special_conditions.append(cond)
+
+    from sympy.utilities.iterables import uniq
+
+    special_conditions = new_special_conditions
+    assert special_conditions == list(uniq(special_conditions))
+
+    for cond in special_conditions:
+        print("cond", cond)
+        assert isinstance(cond, Eq)
+        special_f = f.subs(cond.args[0], cond.args[1])
+        assert f != special_f
+        i = Integral(special_f, x)
+        if _eval_special_case:
+            i = i.doit()
+        conditional_results.append((i, cond))
+
     def compare(item):
         r, c = item
 
@@ -1926,10 +1976,11 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
             return 0
         elif c is S.true:
             return 1
-        elif item in spec:
-            return -1
-        else:
-            return -2
+        return -1
+        # elif item in spec:
+        #     return -1
+        # else:
+        #     return -2
 
     print("presorted", conditional_results)
     conditional_results = sorted(conditional_results, key=compare)
@@ -2054,21 +2105,22 @@ def _meijerint_indefinite_1(f, x, eval_special_case=True):
         # Note: we really do want the powers of x to combine.
         res += powdenest(fac_*r, polar=True)
 
-    if special:
+    if special is not None:
         print("ultimately found special", special, f, x)
         print("special", special)
         # assert len(special) == 1
         from sympy import integrate
 
-        if eval_special_case:
-            ifunc = integrate
-        else:
-            ifunc = Integral
+        if 0:
+            if eval_special_case:
+                ifunc = integrate
+            else:
+                ifunc = Integral
 
-        # special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
-        special = [ (ifunc(integrand, x), cond) if integrand != f else (Integral(f, x), cond) for integrand, cond in special]
+            # special = [ (Integral(integrand, x), cond) for integrand, cond in special ]
+            special = [ (ifunc(integrand, x), cond) if integrand != f else (Integral(f, x), cond) for integrand, cond in special]
 
-        print("turned into integrals", special)
+            print("turned into integrals", special)
 
         # special = special[0]
         # special = Integral(special[0], x), special[1]

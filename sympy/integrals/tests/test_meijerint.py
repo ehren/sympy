@@ -902,15 +902,24 @@ y = symbols("y")
 # (zoo*a).is_zero
 # print(meijerint_indefinite(1/(a**5 -a + 1 + x**2), x))
 
-test_special_cases()
+# test_special_cases()
 # test_issue_8368()
 # test_issue_10211()
 # print(meijerint_indefinite(sin(x**n)*x**y*x**b, x))
 # print(integrate(sin(x**n)*(x**(n-1))*sqrt(1+x**n), x))
-# test_special_cases()
-test_issue_6252()
+test_special_cases()
+# test_issue_6252()
+# assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) == Piecewise((Integral(x**y*sin(1), x), Eq(n, 0)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
 # test_issue_10681()
 
+k = symbols("k")
+# print(meijerint_indefinite((sqrt(a**2 + 2*x) + a)**b/(a**2 + 2*x)**k, x, _eval_special_case=False))
+# print(meijerint_indefinite((sqrt(a**2 + 2*x) + a)**b/(a**2 + 2*x)**k, x, _eval_special_case=True))
+# Integral(2**(-k)*(sqrt(2)*sqrt(a**2/2 + x))**b*(a**2/2 + x)**(-k), x).doit(heurisch=True) # hang/
+# (sqrt(a**2 + t) + sgn*a)**b/(a**2 + t)**r
+
+
+# test_issue_8368()
 
 def test_wtf():
     from sympy import Function,Wild
