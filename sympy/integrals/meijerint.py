@@ -993,6 +993,9 @@ def _check_antecedents(g1, g2, x):
     # http://functions.wolfram.com/HypergeometricFunctions/MeijerG/21/02/03/
     #
     # Note: k=l=r=alpha=1
+
+    special_case = False
+
     sigma, _ = _get_coeff_exp(g1.argument, x)
     omega, _ = _get_coeff_exp(g2.argument, x)
     s, t, u, v = S([len(g1.bm), len(g1.an), len(g1.ap), len(g1.bq)])
@@ -1057,6 +1060,7 @@ def _check_antecedents(g1, g2, x):
                      re(mu + rho + q - p) < 1))
         print("c14 condition", c14)
         print("c14 special", Ne(zos, 1))
+        special_case = Eq(zos, 1)
     else:
         def _cond(z):
             '''Returns True if abs(arg(1-z)) < pi, avoiding arg(0).
@@ -1218,7 +1222,7 @@ def _check_antecedents(g1, g2, x):
     # the rest is corner-cases and terrible to read.
     r = Or(*conds)
     if _eval_cond(r) != False:
-        return r
+        return r, special_case
 
     conds += [And(m + n > p, Eq(t, 0), Eq(phi, 0), s.is_positive is True, bstar.is_positive is True, cstar.is_negative is True,
                   abs(arg(omega)) < (m + n - p + 1)*pi,
@@ -1278,7 +1282,7 @@ def _check_antecedents(g1, g2, x):
         c1, c3, c12, c14, c15)]  # 35
     pr(35)
 
-    return Or(*conds)
+    return Or(*conds), special_case
 
     # NOTE An alternative, but as far as I can tell weaker, set of conditions
     #      can be found in [L, section 5.6.2].
@@ -1661,7 +1665,7 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
     s = _dummy('s', 'rewrite-single', f)
     # to avoid infinite recursion, we have to force the two g functions case
 
-    mellin_special = None
+    mellin_special = False
     mellin_subs_special = None
 
     def my_integrator(f, x):
@@ -1670,7 +1674,8 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
         r = _meijerint_definite_4(f, x, only_double=True)
         if r is not None:
             print("r from _meij indef 4", r)
-            res, cond, mellin_special = r
+            res, cond, melspec = r
+            mellin_special = Or(melspec, mellin_special)
             res = _my_unpolarify(hyperexpand(res, rewrite='nonrepsmall'))
             return Piecewise((res, cond),
                              (Integral(f, (x, 0, oo)), True))
@@ -1743,7 +1748,8 @@ def process_split_special_case_eq(fac, po, gm, x, special_cond):
     return spec_fac*spec_po*spec_gm, special_cond
 
 
-def _rewrite1(f, x, recursive=True, find_special=False):
+# def _rewrite1(f, x, recursive=True, find_special=False):
+def _rewrite1(f, x, recursive=True):
     """
     Try to rewrite f using a (sum of) single G functions with argument a*x**b.
     Return fac, po, g such that f = fac*po*g, fac is independent of x
@@ -1902,27 +1908,27 @@ def _rewrite2(f, x):
 
                     print("g1 g2 in rewrite2", g1, g2)
 
-                    special = S.false
-
-                    two_special_case = None
-
-                    if g1[2] is not None:
-                        two_special_case = g1[2]
-                    if g2[2] is not None:
-                        if two_special_case is not None:
-                            two_special_case |= g2[2]
-                        else:
-                            two_special_case = g2[2]
-                    if special is not None:
-                        if two_special_case is not None:
-                            special |= two_special_case
-                    else:
-                        special = two_special_case
-
-
+                    # special = S.false
+                    #
+                    # two_special_case = None
+                    #
+                    # if g1[2] is not None:
+                    #     two_special_case = g1[2]
+                    # if g2[2] is not None:
+                    #     if two_special_case is not None:
+                    #         two_special_case |= g2[2]
+                    #     else:
+                    #         two_special_case = g2[2]
+                    # if special is not None:
+                    #     if two_special_case is not None:
+                    #         special |= two_special_case
+                    # else:
+                    #     special = two_special_case
 
 
-                    return fac, po, g1[0], g2[0], cond, special
+
+
+                    return fac, po, g1[0], g2[0], cond#, special
 
 
 def meijerint_indefinite(f, x, _eval_special_case=True):
@@ -2002,7 +2008,7 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
 
     # prune false special conditions (e.g. those invalidated by the symbolic splitting point condition above)
     print("special_conditions unpruned", special_conditions)
-    special_conditions = [s for s in special_conditions if s is not S.false]
+    special_conditions = [s for s in special_conditions if s != False]
 
     print("special_conditions pruned", special_conditions)
 
@@ -2103,7 +2109,11 @@ def meijerint_indefinite(f, x, _eval_special_case=True):
             _rewrite_hyperbolics_as_exp(f), x)
         if rv:
             # if not type(rv) is list:
-            return collect(factor_terms(rv), rv.atoms(exp))
+            def collect_factor(e):
+                return collect(factor_terms(e), e.atoms(exp))
+            if isinstance(rv, Piecewise):
+                return rv.func(*[(collect_factor(r), c) for r, c in rv.args])
+            return collect_factor(rv)
             # results.extend(rv)
     print("conditional_results", conditional_results)
     if conditional_results:
@@ -2120,7 +2130,8 @@ def _meijerint_indefinite_1(f, x, eval_special_case=True):
     from sympy import Integral, piecewise_fold, nan, zoo
     _debug('Trying to compute the indefinite integral of', f, 'wrt', x)
 
-    gs = _rewrite1(f, x, find_special=True)
+    # gs = _rewrite1(f, x, find_special=True)
+    gs = _rewrite1(f, x)
     if gs is None:
         # Note: the code that calls us will do expand() and try again
         return None, None
@@ -2508,9 +2519,11 @@ def _meijerint_definite_4(f, x, only_double=False):
 
     # Try two G functions.
     gs = _rewrite2(f, x)
+    special = False
     if gs is not None:
         for full_pb in [False, True]:
-            fac, po, g1, g2, cond, special = gs
+            # fac, po, g1, g2, cond, special = gs
+            fac, po, g1, g2, cond = gs
             _debug('Could rewrite as two G functions:', fac, po, g1, g2)
             res = S.Zero
             for C1, s1, f1 in g1:
@@ -2523,7 +2536,12 @@ def _meijerint_definite_4(f, x, only_double=False):
                     C, f1_, f2_ = r
                     _debug('Saxena subst for yielded:', C, f1_, f2_)
                     print("C1 C2 saxena", C1, C2)
-                    cond = And(cond, _check_antecedents(f1_, f2_, x))
+                    acond, aspecial = _check_antecedents(f1_, f2_, x)
+                    cond = And(cond, acond)
+
+                    special = Or(special, aspecial)
+                    print("aspecial", special)
+
                     if cond == False:
                         break
                     res += C*_int0oo(f1_, f2_, x)

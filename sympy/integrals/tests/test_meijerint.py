@@ -771,8 +771,9 @@ def test_issue_7337():
 
 
 def test_issue_8368():
-    assert meijerint_indefinite(cosh(x)*exp(-x*t), x) == (
-        (-t - 1)*exp(x) + (-t + 1)*exp(-x))*exp(-t*x)/2/(t**2 - 1)
+    assert meijerint_indefinite(cosh(x)*exp(-x*t), x) == Piecewise(
+        (x/2 - exp(-2*x)/4, Eq(t, 1)), (x/2 + exp(2*x)/4, Eq(t, -1)),
+        (((-t - 1)*exp(x) + (-t + 1)*exp(-x))*exp(-t*x)/2/(t**2 - 1), True))
 
 
 def test_issue_10211():
@@ -936,6 +937,6 @@ def test_wtf():
 
 # test_wtf()
 
+test_special_cases()
 test_issue_8368()
-# test_special_cases()
-# test_issue_6252()
+test_issue_6252()
