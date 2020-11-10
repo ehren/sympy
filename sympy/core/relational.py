@@ -649,7 +649,11 @@ class Unequality(Relational):
             else:
                 return _sympify(val)
 
-        return Relational.__new__(cls, lhs, rhs, **options)
+        from sympy import symbols
+        if lhs == symbols("t") and rhs in (1, -1):
+            print("yeah found the bad inequality")
+        res = Relational.__new__(cls, lhs, rhs, **options)
+        return res
 
     @classmethod
     def _eval_relation(cls, lhs, rhs):

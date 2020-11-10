@@ -219,7 +219,7 @@ def _default_integrator(f, x):
     return integrate(f, (x, 0, oo))
 
 
-@_noconds
+# @_noconds
 def _mellin_transform(f, x, s_, integrator=_default_integrator, simplify=True):
     """ Backend function to compute Mellin transforms. """
     from sympy import re, Max, Min, count_ops
@@ -249,6 +249,7 @@ def _mellin_transform(f, x, s_, integrator=_default_integrator, simplify=True):
         conds = conjuncts(to_cnf(cond))
         t = Dummy('t', real=True)
         for c in conds:
+            print("c cond", c)
             a_ = oo
             b_ = -oo
             aux_ = []
@@ -277,14 +278,19 @@ def _mellin_transform(f, x, s_, integrator=_default_integrator, simplify=True):
                 aux = And(aux, Or(*aux_))
         return a, b, aux
 
+    print("melin transform disjuncts cond", list(disjuncts(cond)))
     conds = [process_conds(c) for c in disjuncts(cond)]
+    print("melin transform conds after process", conds)
     conds = [x for x in conds if x[2] != False]
+    print("melin transform conds after dubious process", conds)
     conds.sort(key=lambda x: (x[0] - x[1], count_ops(x[2])))
+    print("melin transform conds after sort ", conds)
 
     if not conds:
         raise IntegralTransformError('Mellin', f, 'no convergence found')
 
     a, b, aux = conds[0]
+    print("a, b, aux", a, b, aux)
     return _simplify(F.subs(s, s_), simplify), (a, b), aux
 
 

@@ -908,7 +908,7 @@ y = symbols("y")
 # print(meijerint_indefinite(sin(x**n)*x**y*x**b, x))
 # print(integrate(sin(x**n)*(x**(n-1))*sqrt(1+x**n), x))
 # test_special_cases()
-test_issue_6252()
+# test_issue_6252()
 # assert meijerint_indefinite(x**y*sin(x**n), x, _eval_special_case=True) == Piecewise((Integral(x**y*sin(1), x), Eq(n, 0)), (x*x**n*x**y*gamma(S(1)/2 + y/(2*n) + 1/(2*n))*hyper((S(1)/2 + y/(2*n) + 1/(2*n),), (S(3)/2, S(3)/2 + y/(2*n) + 1/(2*n)), -x**(2*n)/4)/(2*n*gamma(S(3)/2 + y/(2*n) + 1/(2*n))), True))
 # test_issue_10681()
 
@@ -935,3 +935,7 @@ def test_wtf():
     # pass
 
 # test_wtf()
+
+test_issue_8368()
+# test_special_cases()
+# test_issue_6252()

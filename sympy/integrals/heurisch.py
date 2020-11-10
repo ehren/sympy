@@ -683,6 +683,7 @@ def heurisch(f, x, rewrite=False, hints=None, mappings=None, retries=3,
         non_syms = set()
 
         def find_non_syms(expr):
+            # print("find_non_syms(expr)", expr)
             if expr.is_Integer or expr.is_Rational:
                 pass # ignore trivial numbers
             elif expr in syms:
@@ -697,6 +698,7 @@ def heurisch(f, x, rewrite=False, hints=None, mappings=None, retries=3,
                 raise PolynomialError
 
         try:
+            # print("raw_numer", raw_numer)
             find_non_syms(raw_numer)
         except PolynomialError:
             return None

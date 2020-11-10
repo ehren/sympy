@@ -81,24 +81,26 @@ def _create_lookup_table(table):
     # trivial_case = Eq(p, 0) | Eq(q, 0)
     # trivial_case = Eq(p, 0) | Eq(q, 0)
     trivial_case = Eq(p, 0) | Eq(q, 0)  # q=0 needed for issue testcase, p = 0 needed for Eq(b, 0) 6252 testcase
-    # trivial_case = Eq(q, 0)
+    trivial_case = Eq(q, 0)
     # trivial_case = Eq(q, 0)  # needed for issue testcase
     # trivial_case = Eq(q, -1)
 
-    def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=None):
+    def add(formula, an, ap, bm, bq, arg=t, fac=S.One, cond=True, hint=True, special_case=S.false):
         special = trivial_case
 
-        if special_case is not None:
-            special |= special_case
+        # if special_case is not None:
+        #     special |= special_case
+        # special_case |= trivial_case # needed for issue testcase!
 
         table.setdefault(_mytype(formula, z), []).append((formula,
-                                     [(fac, meijerg(an, ap, bm, bq, arg))], cond, hint, special))
+                                     [(fac, meijerg(an, ap, bm, bq, arg))], cond, hint, special_case))
 
-    def addi(formula, inst, cond, hint=True, special_case=None):
-        special = trivial_case
+    def addi(formula, inst, cond, hint=True, special_case=S.false):
+        # special = trivial_case
 
-        if special_case is not None:
-            special |= special_case
+        # if special_case is not None:
+        #     special |= special_case
+        # special_case |= trivial_case
 
         table.setdefault(
             _mytype(formula, z), []).append((formula, inst, cond, hint, special_case))
@@ -127,13 +129,13 @@ def _create_lookup_table(table):
                        factorial, log, erf, erfc, erfi, polar_lift, Eq)
     # TODO this needs more polar_lift (c/f entry for exp)
     add(Heaviside(t - b)*(t - b)**(a - 1), [a], [], [], [0], t/b,
-        gamma(a)*b**(a - 1), And(b > 0))
+        gamma(a)*b**(a - 1), And(b > 0), special_case=Eq(b, 0))
     add(Heaviside(b - t)*(b - t)**(a - 1), [], [a], [0], [], t/b,
-        gamma(a)*b**(a - 1), And(b > 0))
+        gamma(a)*b**(a - 1), And(b > 0), special_case=Eq(b, 0))
     add(Heaviside(z - (b/p)**(1/q))*(t - b)**(a - 1), [a], [], [], [0], t/b,
-        gamma(a)*b**(a - 1), And(b > 0))
+        gamma(a)*b**(a - 1), And(b > 0), special_case=Eq(b, 0))
     add(Heaviside((b/p)**(1/q) - z)*(b - t)**(a - 1), [], [a], [0], [], t/b,
-        gamma(a)*b**(a - 1), And(b > 0))
+        gamma(a)*b**(a - 1), And(b > 0), special_case=Eq(b, 0))
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(q, 0) | Eq(b, 0))
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
@@ -141,13 +143,13 @@ def _create_lookup_table(table):
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)), special_case=Eq(a, 0) | Eq(q, 0) | Eq(b, 0))  # adds trivial
     add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
-        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0)) # adds trivial for 6252 testcase but needed for atan testcase
+        hint=Not(IsNonPositiveInteger(a)), special_case=Eq(b, 0) | Eq(p, 0) | Eq(q, 0)) # adds trivial for 6252 testcase but needed for atan testcase
     # add((b + t)**(-a), [1 - a], [], [0], [], t/b, b**(-a)/gamma(a),
     #     hint=Not(IsNonPositiveInteger(a)))
     add(abs(b - t)**(-a), [1 - a], [(1 - a)/2], [0], [(1 - a)/2], t/b,
-        2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1)
+        2*sin(pi*a/2)*gamma(1 - a)*abs(b)**(-a), re(a) < 1, special_case=Eq(b, 0))
     add((t**a - b**a)/(t - b), [0, a], [], [0, a], [], t/b,
-        b**(a - 1)*sin(a*pi)/pi)
+        b**(a - 1)*sin(a*pi)/pi, Eq(b, 0))
 
     # 12
     def A1(r, sign, nu):
@@ -176,7 +178,9 @@ def _create_lookup_table(table):
     # (those after look obscure)
 
     # Section 8.4.3
-    add(exp(polar_lift(-1)*t), [], [], [0], [], special_case=Eq(p, 0))
+    add(exp(polar_lift(-1)*t), [], [], [0], [])
+    # add(exp(polar_lift(-1)*t), [], [], [0], [], special_case=Eq(q, 0) | Eq(p, 0))
+    # add(exp(polar_lift(-1)*t), [], [], [0], [], special_case=Eq(q, 0) | Eq(p, -1) | Eq(p, 1))
 
     # TODO can do sin^n, sinh^n by expansion ... where?
     # 8.4.4 (hyperbolic functions)
@@ -542,9 +546,11 @@ def _inflate_g(g, n):
     v = S(len(g.ap) - len(g.bq))
     C = n**(1 + g.nu + v/2)
     C /= (2*pi)**((n - 1)*g.delta)
-    return C, meijerg(inflate(g.an, n), inflate(g.aother, n),
+    res = C, meijerg(inflate(g.an, n), inflate(g.aother, n),
                       inflate(g.bm, n), inflate(g.bother, n),
                       g.argument**n * n**(n*v))
+    print("_inflate_g res", res)
+    return res
 
 
 def _flip_g(g):
@@ -761,6 +767,7 @@ def _rewrite_saxena_1(fac, po, g, x):
 
 
 def _check_antecedents_1(g, x, helper=False):
+
     r"""
     Return a condition under which the mellin transform of g exists.
     Any power of x has already been absorbed into the G function,
@@ -771,6 +778,7 @@ def _check_antecedents_1(g, x, helper=False):
     If ``helper`` is True, only check if the MT exists at infinity, i.e. if
     $\int_1^\infty g\, dx$ exists.
     """
+    _debug = print
     # NOTE if you update these conditions, please update the documentation as well
     from sympy import Eq, Not, ceiling, Ne, re, unbranched_argument as arg
     delta = g.delta
@@ -1047,6 +1055,8 @@ def _check_antecedents(g1, g2, x):
         c14 = And(Eq(phi, 0), bstar + cstar <= 1,
                   Or(Ne(zos, 1), re(mu + rho + v - u) < 1,
                      re(mu + rho + q - p) < 1))
+        print("c14 condition", c14)
+        print("c14 special", Ne(zos, 1))
     else:
         def _cond(z):
             '''Returns True if abs(arg(1-z)) < pi, avoiding arg(0).
@@ -1622,6 +1632,7 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                             if special_case_subs not in [S.true, S.false]: # and special_case_subs is not S.false:
                                 special_case = special_case_subs
 
+                    print("used formula", formula)
 
                     return res, cond, special_case
 
@@ -1650,11 +1661,16 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
     s = _dummy('s', 'rewrite-single', f)
     # to avoid infinite recursion, we have to force the two g functions case
 
+    mellin_special = None
+    mellin_subs_special = None
+
     def my_integrator(f, x):
+        nonlocal mellin_special
         from sympy import Integral, hyperexpand
         r = _meijerint_definite_4(f, x, only_double=True)
         if r is not None:
-            res, cond = r
+            print("r from _meij indef 4", r)
+            res, cond, mellin_special = r
             res = _my_unpolarify(hyperexpand(res, rewrite='nonrepsmall'))
             return Piecewise((res, cond),
                              (Integral(f, (x, 0, oo)), True))
@@ -1663,6 +1679,7 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
         F, strip, _ = mellin_transform(f, x, s, integrator=my_integrator,
                                        simplify=False, needeval=True)
         g = my_imt(F, s, x, strip)
+        print("my_imt regular", g)
     except IntegralTransformError:
         g = None
     if g is None:
@@ -1675,7 +1692,15 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                 F, strip, _ = mellin_transform(f.subs(x, a*x), x, s,
                                                integrator=my_integrator,
                                                needeval=True, simplify=False)
-                g = my_imt(F, s, x, strip).subs(a, 1)
+                g = my_imt(F, s, x, strip)#.subs(a, 1)
+                print("my imt g b4 subs", g)
+                g = g.subs(a,1)
+                print("my imt g after subs", g)
+                # if mellin_special is not None:
+                #     mellin_special = mellin_special.subs(a, 1)
+                # mellin_subs_special = Eq(a, 1)
+                # if special_case is not None:
+                #     special_case |= mellin_subs_special
             except IntegralTransformError:
                 g = None
     if g is None or g.has(oo, nan, zoo):
@@ -1693,8 +1718,22 @@ def _rewrite_single(f, x, recursive=True, find_special=False):
                                unpolarify(polarify(
                                    a, lift=True), exponents_only=True)
                                *x**b))]
+        # if special_case is not None:
+        #     special_case |= Eq(b, 0)
+        # else:
+        #     special_case = Eq(b, 0)
+
+    if mellin_special is not None:
+        if mellin_subs_special is not None:
+            mellin_special |= mellin_subs_special
+    else:
+        mellin_special = mellin_subs_special
+
     _debug('Recursive Mellin transform worked:', g)
-    return res, True, special_case
+    print("mellin_special", mellin_special)
+    mellin_special = unpolarify(mellin_special)
+    print("mellin_special unpolar", mellin_special)
+    return res, True, mellin_special
 
 
 def process_split_special_case_eq(fac, po, gm, x, special_cond):
@@ -1712,6 +1751,7 @@ def _rewrite1(f, x, recursive=True, find_special=False):
     Here g is a result from _rewrite_single.
     Return None on failure.
     """
+    find_special=True
     print("_rewrite1 f", f)
     fac, po, gm = _split_mul(f, x)
     g = _rewrite_single(gm, x, recursive, find_special)
@@ -1859,7 +1899,30 @@ def _rewrite2(f, x):
             if g1 and g2:
                 cond = And(g1[1], g2[1])
                 if cond != False:
-                    return fac, po, g1[0], g2[0], cond
+
+                    print("g1 g2 in rewrite2", g1, g2)
+
+                    special = S.false
+
+                    two_special_case = None
+
+                    if g1[2] is not None:
+                        two_special_case = g1[2]
+                    if g2[2] is not None:
+                        if two_special_case is not None:
+                            two_special_case |= g2[2]
+                        else:
+                            two_special_case = g2[2]
+                    if special is not None:
+                        if two_special_case is not None:
+                            special |= two_special_case
+                    else:
+                        special = two_special_case
+
+
+
+
+                    return fac, po, g1[0], g2[0], cond, special
 
 
 def meijerint_indefinite(f, x, _eval_special_case=True):
@@ -2428,6 +2491,7 @@ def _meijerint_definite_4(f, x, only_double=False):
                 if C == 0:
                     continue
                 C, f = _rewrite_saxena_1(fac*C, po*x**s, f, x)
+                print("_meijerint_definite_4, C f saxena", C, f)
                 res += C*_int0oo_1(f, x)
                 cond = And(cond, _check_antecedents_1(f, x))
                 if cond == False:
@@ -2437,13 +2501,16 @@ def _meijerint_definite_4(f, x, only_double=False):
                 _debug('But cond is always False.')
             else:
                 _debug('Result before branch substitutions is:', res)
-                return _my_unpolarify(hyperexpand(res)), cond
+                print("cond special", cond, special)
+                # print("cond negated", ~cond)
+                # print("cond negated simped", (~cond).simplify())
+                return _my_unpolarify(hyperexpand(res)), cond, special
 
     # Try two G functions.
     gs = _rewrite2(f, x)
     if gs is not None:
         for full_pb in [False, True]:
-            fac, po, g1, g2, cond = gs
+            fac, po, g1, g2, cond, special = gs
             _debug('Could rewrite as two G functions:', fac, po, g1, g2)
             res = S.Zero
             for C1, s1, f1 in g1:
@@ -2455,6 +2522,7 @@ def _meijerint_definite_4(f, x, only_double=False):
                         return
                     C, f1_, f2_ = r
                     _debug('Saxena subst for yielded:', C, f1_, f2_)
+                    print("C1 C2 saxena", C1, C2)
                     cond = And(cond, _check_antecedents(f1_, f2_, x))
                     if cond == False:
                         break
@@ -2467,9 +2535,12 @@ def _meijerint_definite_4(f, x, only_double=False):
                 _debug('But cond is always False (full_pb=%s).' % full_pb)
             else:
                 _debug('Result before branch substitutions is:', res)
+                print("cond special", cond, special)
+                # print("cond negated", ~cond)
+                # print("cond negated simped", (~cond).simplify())
                 if only_double:
-                    return res, cond
-                return _my_unpolarify(hyperexpand(res)), cond
+                    return res, cond, special
+                return _my_unpolarify(hyperexpand(res)), cond, special
 
 
 def meijerint_inversion(f, x, t):
@@ -2575,6 +2646,9 @@ def meijerint_inversion(f, x, t):
             _debug('But cond is always False.')
         else:
             _debug('Result before branch substitution:', res)
+            _debug('cond', cond)
+            # print("cond negated", (~cond))
+            # print("cond negated simped", (~cond).simplify())
             res = _my_unpolarify(hyperexpand(res))
             if not res.has(Heaviside):
                 res *= Heaviside(t)
