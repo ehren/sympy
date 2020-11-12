@@ -1528,7 +1528,8 @@ def test_issue_15124():
     omega = IndexedBase('omega')
     m, p = symbols('m p', cls=Idx)
     assert integrate(exp(x*I*(omega[m] + omega[p])), x, conds='none') == \
-        -I*exp(I*x*omega[m])*exp(I*x*omega[p])/(omega[m] + omega[p])
+        Piecewise((x, Eq(omega[m], -omega[p])),
+                  (-I*exp(I*x*omega[m])*exp(I*x*omega[p])/(omega[m] + omega[p]), True))
 
 
 def test_issue_15218():
@@ -1624,7 +1625,10 @@ def test_issue_13112():
 
 def test_issue_14709b():
     h = Symbol('h', positive=True)
+    # indef = integrate(x*acos(1 - 2*x/h), x)
+    # print("indef", indef)
     i = integrate(x*acos(1 - 2*x/h), (x, 0, h))
+    print(i)
     assert i == 5*h**2*pi/16
 
 
@@ -1661,9 +1665,10 @@ def test_issue_17473():
     x = Symbol('x')
     n = Symbol('n')
     assert integrate(sin(x**n), x) == \
-        x*x**n*gamma(S(1)/2 + 1/(2*n))*hyper((S(1)/2 + 1/(2*n),),
-                     (S(3)/2, S(3)/2 + 1/(2*n)),
-                     -x**(2*n)/4)/(2*n*gamma(S(3)/2 + 1/(2*n)))
+        Piecewise((x*sin(1), Eq(n, 0)),
+                  (x*x**n*gamma(S(1)/2 + 1/(2*n))*hyper((S(1)/2 + 1/(2*n),),
+                   (S(3)/2, S(3)/2 + 1/(2*n)),
+                   -x**(2*n)/4)/(2*n*gamma(S(3)/2 + 1/(2*n))), True))
 
 
 def test_issue_17671():
@@ -1676,7 +1681,8 @@ def test_issue_2975():
     w = Symbol('w')
     C = Symbol('C')
     y = Symbol('y')
-    assert integrate(1/(y**2+C)**(S(3)/2), (y, -w/2, w/2)) == w/(C**(S(3)/2)*sqrt(1 + w**2/(4*C)))
+    assert integrate(1/(y**2+C)**(S(3)/2), (y, -w/2, w/2)) == \
+        Piecewise((0, Eq(C, 0)), (w/(C**(S(3)/2)*sqrt(1 + w**2/(4*C))), True))
 
 
 def test_issue_7827():
@@ -1704,3 +1710,24 @@ def test_issue_4231():
 def test_issue_17841():
     f = diff(1/(x**2+x+I), x)
     assert integrate(f, x) == 1/(x**2 + x + I)
+
+# test_issue_14241()
+# test_issue_14709b()
+# test_issue_2975()
+# test_issue_4487()
+# test_issue_15124()
+# test_issue_14241()
+# test_issue_15124()
+#
+nz=symbols("nz", zero=False, finite=True)
+nz2=symbols("nz2", zero=False, finite=True)
+nz3=symbols("nz3", zero=False, finite=True)
+# print(Eq(nz*(x + y), 0).simplify())
+# print(Ne(nz*(x + y), 0).simplify())
+# print(Ne(I*(x + y), 0).simplify())
+print(Ne((x + y + nz2)*nz*nz2, 0).simplify())
+
+# print(Eq(x*y*(1 + I), 0).simplify())
+# print(Eq(x*I + y*2*I, 0).simplify())
+
+# print(Eq(sqrt(5)*(x + y), 0).simplify())

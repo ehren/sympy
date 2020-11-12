@@ -319,3 +319,19 @@ def test_RR():
 # Whittaker functions
 # f = WhittakerW(mu + 1, nu, x) / (WhittakerW(mu, nu, x) * x)
 # g = x/2 - mu*ln(x) - ln(WhittakerW(mu, nu, x))
+
+
+y = Symbol('y')
+# print(heurisch_wrapper(sin((y**5 - y + 1)*sqrt(x)), x))# == Piecewise(
+# print(heurisch_wrapper(x**(y**5 - y + 1), x))# == Piecewise(
+F = Function("F")
+print(heurisch_wrapper(x**(F(y)), x))# == Piecewise(
+
+
+print(heurisch_wrapper(x**(y**5-y), x))
+# print(integrate(x**(y**5-y), x, heurisch=True))
+
+# print(heurisch_wrappexr(sin(y*sqrt(x)), x))# == Piecewise(
+    # (-2*sqrt(x)*cos(sqrt(x)*y)/y + 2*sin(sqrt(x)*y)/y**2, Ne(y, 0)),
+    # (0, True))
+

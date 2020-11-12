@@ -557,7 +557,9 @@ class Equality(Relational):
 
     def _eval_simplify(self, **kwargs):
         from .add import Add
+        from .mul import Mul
         from sympy.solvers.solveset import linear_coeffs
+        from sympy import factor_terms
         # standard simplify
         e = super()._eval_simplify(**kwargs)
         if not isinstance(e, Equality):
@@ -577,7 +579,24 @@ class Equality(Relational):
                     e = enew
             except ValueError:
                 pass
-        return e.canonical
+        e = e.canonical
+        enew = factor_terms(e)
+        if enew.lhs.is_Mul:
+            remove = None
+            if enew.rhs.is_Mul:
+                remove = [a for a in enew.lhs.args if
+                          a in enew.rhs.args and a.is_zero is False
+                                             and a.is_finite]
+            elif enew.rhs is S.Zero:
+                remove = [a for a in enew.lhs.args if a.is_zero is False
+                                                   and a.is_finite]
+            if not remove:
+                return e
+            e = enew
+            e = e.func(e.lhs.func(*[a for a in e.lhs.args if a not in remove]),
+                       e.rhs.func(*[a for a in e.rhs.args if a not in remove]))
+            e = e._eval_simplify(**kwargs)
+        return e
 
     def integrate(self, *args, **kwargs):
         """See the integrate function in sympy.integrals"""
